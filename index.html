@@ -996,6 +996,8 @@ el.appendChild(item);
 });
 }
 function enterConvo(id){
+document.getElementById('chat-normal-area').style.display = 'none';
+document.getElementById('empty-list').style.display = 'none';
 if(document.getElementById('scr-convo').classList.contains('open')&&curId===id)return;
 curId=id;editingMsgId=null;var chat=getChat(id);if(!chat)return;
 resetTheme();if(chat.themeParams)applyTheme(chat.themeParams,true);else restoreGlobalTheme();
@@ -1014,6 +1016,7 @@ document.getElementById('g-header').style.display='none';document.getElementById
 setTimeout(function(){msgs.scrollTop=99999;},80);
 }
 function backToList(){
+document.getElementById('chat-normal-area').style.display = 'flex';
 var cd=document.getElementById('convo-drawer');cd.style.transform='translateX(100%)';
 hideCtx();curId=null;editingMsgId=null;resetTheme();restoreGlobalTheme(); 
 document.getElementById('scr-convo').classList.remove('open');
