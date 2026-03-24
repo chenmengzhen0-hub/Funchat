@@ -938,51 +938,117 @@ return'OK';
 }
 
 // ══ WORKSHOP STREAMING API ══
-// Safari/iOS 检测：iOS 上所有浏览器都用 WebKit 内核，包括百度/Firefox/Safari
+// Safari/iOS 检测
 var _isSafariLike=(function(){var ua=navigator.userAgent;return/iPad|iPhone|iPod/.test(ua)||(/Safari/.test(ua)&&!/Chrome/.test(ua))||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);})();
 
-// 非流式 fallback（Safari/iOS 专用，避免长连接被系统杀掉）
-async function doNonStream(model,sys,msgs,onChunk,temp){
-var brand=getBrand(model);
-var maxTok=brand==='anthropic'?16384:8192;var s=loadSettings();
-var apiKey=brand==='custom'?(s.keys?s.keys.custom:''):((s.keys||{})[brand]||'');
-if(!apiKey)throw new Error('请先在设置⚙里填写 '+(BRANDS.find(function(b){return b.id===brand;})||{name:brand}).name+' 的 API Key');
-var md=getMd(model);var t=temp!==undefined?temp:(md.thinking?1:0.8);
-if(brand==='anthropic'){
-var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:model,max_tokens:maxTok,stream:false,system:sys,messages:msgs})});
-var d=await r.json();if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
-var text='',thinking='',tIn=d.usage?d.usage.input_tokens||0:0,tOut=d.usage?d.usage.output_tokens||0:0;
-(d.content||[]).forEach(function(b){if(b.type==='text')text+=b.text;if(b.type==='thinking')thinking+=b.thinking;});
-if(onChunk)onChunk(text,text);
-return{text:text,tIn:tIn,tOut:tOut,thinking:thinking||null};
+// XHR 流式 (Safari/iOS/Firefox 兼容方案，用 onprogress 代替 ReadableStream)
+function doStreamXHR(url,hdrs,bodyStr,onChunk,parseSSE,timeoutMs){
+return new Promise(function(resolve,reject){
+var xhr=new XMLHttpRequest();
+xhr.open('POST',url,true);
+Object.keys(hdrs).forEach(function(k){xhr.setRequestHeader(k,hdrs[k]);});
+xhr.timeout=timeoutMs||180000;
+var lastLen=0;
+xhr.onprogress=function(){
+var newData=xhr.responseText.substring(lastLen);
+lastLen=xhr.responseText.length;
+if(newData&&onChunk)onChunk(newData);
+};
+xhr.onload=function(){
+if(xhr.status>=200&&xhr.status<300){
+resolve(xhr.responseText);
 }else{
-var url=API_URLS[brand]||'';if(brand==='custom'){url=(s.customUrl||'');if(!url)throw new Error('请在设置里填写自定义API地址');}
-var cleanMsgs=msgs.map(function(m){return{role:m.role,content:m.content||''};}).filter(function(m){return['user','assistant'].indexOf(m.role)>=0&&m.content.trim();});
-if((brand==='custom'||brand==='gemini')&&cleanMsgs.length>0&&cleanMsgs[cleanMsgs.length-1].role==='assistant')cleanMsgs=cleanMsgs.slice(0,-1);
-var hdrs={'Content-Type':'application/json','Authorization':'Bearer '+apiKey};
-if(brand==='openrouter'||brand==='gemini'){hdrs['HTTP-Referer']='https://aistudio.app';hdrs['X-Title']='AI Studio';}
-var body={model:model,max_tokens:maxTok,stream:false,messages:[{role:'system',content:sys}].concat(cleanMsgs)};
-if(brand!=='custom'&&brand!=='gemini')body.temperature=t;
-var r2=await fetch(url,{method:'POST',headers:hdrs,body:JSON.stringify(body)});
-var d2=await r2.json();if(d2.error)throw new Error(d2.error.message||String(d2.error));
-var tIn2=d2.usage?d2.usage.prompt_tokens||0:0,tOut2=d2.usage?d2.usage.completion_tokens||0:0;
-var ch=d2.choices&&d2.choices[0];var text2=ch?(ch.message.content||''):'';var thinking2=ch?(ch.message.reasoning_content||''):'';
-if(Array.isArray(text2))text2=text2.map(function(x){return x.text||x.content||'';}).join('');
-if(onChunk)onChunk(text2,text2);
-return{text:text2,tIn:tIn2,tOut:tOut2,thinking:thinking2||null};
+try{var e=JSON.parse(xhr.responseText);reject(new Error((e.error&&(e.error.message||JSON.stringify(e.error)))||'HTTP '+xhr.status));}
+catch(x){reject(new Error('HTTP '+xhr.status));}
 }
+};
+xhr.onerror=function(){reject(new Error('Load failed'));};
+xhr.ontimeout=function(){reject(new Error('Request timeout'));};
+xhr.send(bodyStr);
+});
+}
+
+// 解析 SSE 文本 (OpenAI 格式: DeepSeek/Kimi/OpenRouter/Gemini)
+function parseOpenAISSE(fullText){
+var text='',tIn=0,tOut=0,thinking='';
+var lines=fullText.split('\n');
+for(var i=0;i<lines.length;i++){
+var line=lines[i];if(line.indexOf('data:')!==0)continue;
+var raw=line.slice(5).trim();if(raw==='[DONE]'||!raw)continue;
+try{var j=JSON.parse(raw);
+if(j.usage){tIn=j.usage.prompt_tokens||tIn;tOut=j.usage.completion_tokens||tOut;}
+var delta=j.choices&&j.choices[0]?j.choices[0].delta:null;
+if(delta&&delta.reasoning_content)thinking+=delta.reasoning_content;
+if(delta&&delta.content)text+=delta.content;
+}catch(e){}
+}
+return{text:text,tIn:tIn,tOut:tOut,thinking:thinking||null};
+}
+
+// 解析 SSE 文本 (Anthropic 格式)
+function parseAnthropicSSE(fullText){
+var text='',tIn=0,tOut=0,thinking='';
+var lines=fullText.split('\n');
+for(var i=0;i<lines.length;i++){
+var line=lines[i];if(line.indexOf('data:')!==0)continue;
+var raw=line.slice(5).trim();if(!raw)continue;
+try{var j=JSON.parse(raw);
+if(j.type==='message_start')tIn=j.message&&j.message.usage?j.message.usage.input_tokens||0:0;
+if(j.type==='message_delta')tOut=j.usage?j.usage.output_tokens||0:0;
+if(j.type==='content_block_delta'){
+if(j.delta&&j.delta.type==='text_delta')text+=j.delta.text;
+if(j.delta&&j.delta.type==='thinking_delta')thinking+=j.delta.thinking;
+}
+}catch(e){}
+}
+return{text:text,tIn:tIn,tOut:tOut,thinking:thinking||null};
 }
 
 async function doStream(model,sys,msgs,onChunk,temp){
-// Safari/iOS：直接用非流式，彻底避免 Load failed
-if(_isSafariLike){return doNonStream(model,sys,msgs,onChunk,temp);}
 var brand=getBrand(model);
 var maxTok=brand==='anthropic'?16384:8192;var s=loadSettings();
 var apiKey=brand==='custom'?(s.keys?s.keys.custom:''):((s.keys||{})[brand]||'');
 if(!apiKey)throw new Error('请先在设置⚙里填写 '+(BRANDS.find(function(b){return b.id===brand;})||{name:brand}).name+' 的 API Key');
 var md=getMd(model);var t=temp!==undefined?temp:(md.thinking?1:0.8);
-// AbortController：超时保护 + 方便手动取消
-var ac=new AbortController();var tid=setTimeout(function(){ac.abort();},180000);// 3分钟超时
+
+// ═══ Safari/iOS: XHR 流式 (onprogress 方案，最兼容) ═══
+if(_isSafariLike){
+var isAnthropic=brand==='anthropic'||(brand==='custom'&&(s.customFmt||'openai')==='anthropic');
+var xhrUrl,xhrHdrs,xhrBody;
+var cleanMsgs=msgs.map(function(m){return{role:m.role,content:m.content||''};}).filter(function(m){return['user','assistant'].indexOf(m.role)>=0&&m.content.trim();});
+if(isAnthropic){
+var aUrl=(brand==='custom')?s.customUrl:'https://api.anthropic.com/v1/messages';
+xhrUrl=aUrl;
+xhrHdrs={'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
+xhrBody=JSON.stringify({model:brand==='custom'?model.replace('custom::',''):model,max_tokens:maxTok,stream:true,system:sys,messages:msgs});
+}else{
+var url=API_URLS[brand]||'';if(brand==='custom'){url=s.customUrl||'';if(!url)throw new Error('请在设置里填写自定义API地址');}
+if((brand==='custom'||brand==='gemini')&&cleanMsgs.length>0&&cleanMsgs[cleanMsgs.length-1].role==='assistant')cleanMsgs=cleanMsgs.slice(0,-1);
+xhrUrl=url;
+xhrHdrs={'Content-Type':'application/json','Authorization':'Bearer '+apiKey};
+if(brand==='openrouter'||brand==='gemini'){xhrHdrs['HTTP-Referer']='https://aistudio.app';xhrHdrs['X-Title']='AI Studio';}
+var bObj={model:model,max_tokens:maxTok,stream:true,messages:[{role:'system',content:sys}].concat(cleanMsgs)};
+if(brand!=='custom'&&brand!=='gemini')bObj.temperature=t;
+xhrBody=JSON.stringify(bObj);
+}
+// XHR + onprogress 实时解析
+var xhrText='',xhrParsed='';
+var rawSSE=await doStreamXHR(xhrUrl,xhrHdrs,xhrBody,function(newChunk){
+xhrText+=newChunk;
+// 实时增量解析 SSE，回调 onChunk
+var parsed=isAnthropic?parseAnthropicSSE(xhrText):parseOpenAISSE(xhrText);
+if(parsed.text.length>xhrParsed.length){
+var newContent=parsed.text.substring(xhrParsed.length);
+xhrParsed=parsed.text;
+if(onChunk)onChunk(newContent,parsed.text);
+}
+},null,180000);
+var result=isAnthropic?parseAnthropicSSE(rawSSE):parseOpenAISSE(rawSSE);
+return result;
+}
+
+// ═══ 桌面浏览器: 原 fetch streaming ═══
+var ac=new AbortController();var tid=setTimeout(function(){ac.abort();},180000);
 if(brand==='anthropic'){
 var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:model,max_tokens:maxTok,stream:true,system:sys,messages:msgs})});
 if(!r.ok){clearTimeout(tid);var e=await r.json().catch(function(){return{};});throw new Error((e.error&&e.error.message)||'HTTP '+r.status);}
@@ -990,10 +1056,9 @@ var reader=r.body.getReader();var dec=new TextDecoder();var buf='',text='',tIn=0
 try{
 while(true){var chunk=await reader.read();if(chunk.done)break;buf+=dec.decode(chunk.value,{stream:true});var lines=buf.split('\n');buf=lines.pop();for(var i=0;i<lines.length;i++){var line=lines[i];if(line.indexOf('data:')!==0)continue;var raw=line.slice(5).trim();if(!raw)continue;try{var j=JSON.parse(raw);if(j.type==='message_start')tIn=j.message&&j.message.usage?j.message.usage.input_tokens||0:0;if(j.type==='message_delta')tOut=j.usage?j.usage.output_tokens||0:0;if(j.type==='content_block_delta'){if(j.delta&&j.delta.type==='text_delta'){text+=j.delta.text;if(onChunk)onChunk(j.delta.text,text);}if(j.delta&&j.delta.type==='thinking_delta')thinking+=j.delta.thinking;}}catch(e){}}}
 }catch(streamErr){
-// 流中断但已收到部分内容 → 降级返回已有内容而不是直接报错
-console.warn('Stream interrupted:',streamErr.message,'| partial text length:',text.length);
+console.warn('Stream interrupted:',streamErr.message,'| got:',text.length);
 if(text.length>20){return{text:text,tIn:tIn,tOut:tOut,thinking:thinking||null,partial:true};}
-throw streamErr;// 内容太少才真正报错
+throw streamErr;
 }finally{clearTimeout(tid);try{reader.releaseLock();}catch(e){}}
 return{text:text,tIn:tIn,tOut:tOut,thinking:thinking||null};
 }else{
@@ -1010,7 +1075,7 @@ var reader2=r2.body.getReader();var dec2=new TextDecoder();var buf2='',text2='',
 try{
 while(true){var chunk2=await reader2.read();if(chunk2.done)break;buf2+=dec2.decode(chunk2.value,{stream:true});var lines2=buf2.split('\n');buf2=lines2.pop();for(var i=0;i<lines2.length;i++){var line2=lines2[i];if(line2.indexOf('data:')!==0)continue;var raw2=line2.slice(5).trim();if(raw2==='[DONE]')break;if(!raw2)continue;try{var j2=JSON.parse(raw2);if(j2.usage){tIn2=j2.usage.prompt_tokens||tIn2;tOut2=j2.usage.completion_tokens||tOut2;}var delta=j2.choices&&j2.choices[0]?j2.choices[0].delta:null;if(delta&&delta.reasoning_content)thinking2+=delta.reasoning_content;if(delta&&delta.content){text2+=delta.content;if(onChunk)onChunk(delta.content,text2);}}catch(e){}}}
 }catch(streamErr){
-console.warn('Stream interrupted:',streamErr.message,'| partial text length:',text2.length);
+console.warn('Stream interrupted:',streamErr.message,'| got:',text2.length);
 if(text2.length>20){return{text:text2,tIn:tIn2,tOut:tOut2,thinking:thinking2||null,partial:true};}
 throw streamErr;
 }finally{clearTimeout(tid);try{reader2.releaseLock();}catch(e){}}
