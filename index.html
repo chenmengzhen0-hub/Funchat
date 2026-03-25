@@ -109,6 +109,19 @@ html,body{height:100%;overflow:hidden;background:#f5f5f3}
 .pd-sllbl b{color:#1a1a1a;font-weight:700;font-style:normal}
 .pd-sl{width:100%;accent-color:#1a1a1a}
 .pd-prev{width:100%;height:100px;border-radius:12px;border:1px solid var(--border);margin:8px 0 4px}
+/* Code Board */
+.cb-btn{height:28px;padding:0 11px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+.cb-blue{background:var(--accent);border-color:var(--accent);color:var(--afg,#fff)}
+.cb-green{background:#2ecc71;border-color:#2ecc71;color:#fff}
+.cb-btn:active{opacity:.7}
+#cb-stat.writing{color:#f39c12;background:rgba(243,156,18,.12);animation:tpulse 1.5s infinite}
+#cb-stat.done{color:#2ecc71;background:rgba(46,204,113,.12)}
+#code-board.collapsed #cb-body{display:none}
+#code-board.collapsed #cb-toggle{transform:rotate(-90deg)}
+#cb-code{width:100%;height:25vh;min-height:80px;background:rgba(0,0,0,.15);color:var(--text);border:none;outline:none;resize:none;font-family:monospace;font-size:12px;line-height:1.6;padding:8px 10px;white-space:pre;overflow:auto}
+#code-board{background:var(--surface);border-bottom:1px solid var(--border)}
+#cb-bar{background:rgba(0,0,0,.05)}
+#cb-acts{border-top:1px solid var(--border)}
 /* Pixel painter */
 #painter-toolbar{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center;background:var(--surface);flex-shrink:0}
 .ptool{width:34px;height:34px;border-radius:8px;border:1.5px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;transition:all .15s;flex-shrink:0}
@@ -366,6 +379,26 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
     </div>
     <div id="ws-cost-badge" style="font-size:12px;font-weight:700;color:#ff6b35;cursor:pointer;font-family:'Space Mono',monospace" onclick="openWsCost()">$0.000</div>
     <button class="g-btn" onclick="toggleWsDrawer()">⋮</button>
+  </div>
+  <!-- Code Board (常驻，默认折叠) -->
+  <div id="code-board" class="collapsed" style="display:flex;flex-direction:column;flex-shrink:0">
+    <div id="cb-bar" style="height:36px;padding:0 12px;display:flex;align-items:center;gap:6px;cursor:pointer;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px">📋</span>
+      <span style="font-size:11px;font-weight:600;color:var(--text);flex:1">代码黑板</span>
+      <span id="cb-stat" style="font-size:10px;color:var(--muted);padding:2px 7px;border-radius:8px;background:rgba(0,0,0,.05)"></span>
+      <span id="cb-toggle" style="font-size:10px;color:var(--muted);transition:transform .2s">▼</span>
+    </div>
+    <div id="cb-body">
+      <textarea id="cb-code" spellcheck="false" placeholder="AI写的代码出现在这里，也可以自己粘贴代码…"></textarea>
+      <div id="cb-acts" style="height:38px;padding:0 8px;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.03)">
+        <button class="cb-btn cb-blue" id="cb-run">▶ 运行</button>
+        <button class="cb-btn" id="cb-review">🔍 审查</button>
+        <button class="cb-btn cb-green" id="cb-save">💾 存</button>
+        <button class="cb-btn" id="cb-selall" title="全选">☐</button>
+        <button class="cb-btn" id="cb-clear" title="清空">🗑</button>
+        <span id="cb-cc" style="font-size:10px;color:var(--muted);margin-left:auto">0</span>
+      </div>
+    </div>
   </div>
   <div id="ws-msgs" style="flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth">
     <div id="ws-welcome">
@@ -973,7 +1006,14 @@ function doStreamXHR(url, headers, bodyStr, onData) {
 
 // ══ iOS RESUME HELPERS ══
 function _iosIsComplete(text) {
-  return text.indexOf('</GAME_HTML>') >= 0;
+  // 游戏代码完整
+  if(text.indexOf('</GAME_HTML>') >= 0) return true;
+  if(text.indexOf('</html>') >= 0) return true;
+  // 主题JSON完整（有闭合的大括号且包含type:theme）
+  if(text.indexOf('"type"')>=0&&text.indexOf('"theme"')>=0&&text.lastIndexOf('}')>text.lastIndexOf('"theme"')) return true;
+  // 普通回复（没有代码标记，认为已完成）
+  if(text.indexOf('<GAME_HTML>')<0&&text.indexOf('<!DOCTYPE')<0&&text.indexOf('<html')<0&&text.indexOf('```html')<0) return true;
+  return false;
 }
 function _iosBuildContinuationMsgs(msgs, accumulated) {
   return msgs.concat([
@@ -1084,15 +1124,15 @@ if(brand==='anthropic'){
             }catch(pe){}
           }
         }
-        if(_iosIsComplete(acc2)||att2>=5)break;
-        curBodyMsgs=_iosBuildContinuationMsgs([{role:'system',content:sys}].concat(cleanMsgs),acc2);
-        continue;
+        // 正常完成 → 直接退出循环
+        break;
       }catch(xe){
-        if(acc2.length>50&&!_iosIsComplete(acc2)){
+        // 网络中断但有数据 → 续传
+        if(acc2.length>50){
+          if(_iosIsComplete(acc2))break; // 代码已完整
           curBodyMsgs=_iosBuildContinuationMsgs([{role:'system',content:sys}].concat(cleanMsgs),acc2);
           continue;
         }
-        if(acc2.length>50&&_iosIsComplete(acc2))break;
         throw xe;
       }
     }
@@ -1454,6 +1494,71 @@ function clearWsMsgs(){if(!confirm('确定清空工坊对话？'))return;wsMsgs=
 function saveWsTheme(){if(!curTheme){alert('当前没有应用主题,先让AI生成一个吧！');return;}var name=prompt('给主题起个名字:','我的主题');if(!name||!name.trim())return;addVault({id:genId(),type:'theme',title:name.trim(),params:curTheme,savedAt:Date.now()});saveGlobalTheme(Object.assign({},curTheme,{_fromVault:true}));petOnTheme();alert('✅ 主题「'+name.trim()+'」已保存到仓库');}
 function saveWsGame(){if(!wsCurrentGame){alert('当前没有游戏,先让AI生成一个吧！');return;}var name=prompt('给游戏起个名字:',wsCurrentGame.title||'我的游戏');if(!name||!name.trim())return;addVault({id:genId(),type:'game',title:name.trim(),html:wsCurrentGame.html,savedAt:Date.now()});alert('✅ 游戏「'+name.trim()+'」已保存到仓库');}
 function openWsCost(){alert('工坊本次累计费用:'+fmtCost(wsTotalCost));}
+
+// ══ CODE BOARD ══
+var cbWriting=false;
+function cbShow(){document.getElementById('code-board').classList.remove('collapsed');}
+function cbHide(){document.getElementById('code-board').classList.add('collapsed');}
+function cbStat(cls,txt){var el=document.getElementById('cb-stat');el.className=cls||'';el.textContent=txt||'';}
+function cbSetCode(val){var el=document.getElementById('cb-code');el.value=val;document.getElementById('cb-cc').textContent=val.length;}
+function cbAppend(txt){var el=document.getElementById('cb-code');el.value+=txt;el.scrollTop=el.scrollHeight;document.getElementById('cb-cc').textContent=el.value.length;}
+function cbGetCode(){return document.getElementById('cb-code').value.trim();}
+
+// board bar: toggle collapse
+document.getElementById('cb-bar').addEventListener('click',function(){
+  if(cbWriting)return;
+  document.getElementById('code-board').classList.toggle('collapsed');
+});
+// char count on manual edit
+document.getElementById('cb-code').addEventListener('input',function(){
+  document.getElementById('cb-cc').textContent=this.value.length;
+});
+// run
+document.getElementById('cb-run').addEventListener('click',function(){
+  var code=cbGetCode();if(!code)return;
+  playGame(null,'游戏预览',code);
+});
+// review
+document.getElementById('cb-review').addEventListener('click',function(){
+  var code=cbGetCode();if(!code||cbWriting)return;
+  cbStat('writing','🔍 审查中…');
+  reviewGameCode(code).then(function(fixed){
+    if(fixed){
+      cbSetCode(fixed);
+      cbStat('done','✅ 已修复');
+      var msgs=document.getElementById('ws-msgs');
+      var typing=document.getElementById('ws-typing');
+      var aid=genId();var m={role:'assistant',content:'🔧 代码已自动修复，点 ▶运行 试试！',id:aid,ts:Date.now()};
+      wsMsgs.push(m);saveWsMsgs();renderMsg('ws',m,wsMsgs.length-1);
+      msgs.scrollTop=msgs.scrollHeight;
+    }else{
+      cbStat('done','✅ 没发现问题');
+    }
+  }).catch(function(e){
+    cbStat('done','⚠️ 审查失败');
+    console.warn('审查失败:',e);
+  });
+});
+// save
+document.getElementById('cb-save').addEventListener('click',function(){
+  var code=cbGetCode();if(!code)return;
+  var name=prompt('给游戏起个名字:','新游戏');
+  if(!name||!name.trim())return;
+  addVault({id:genId(),type:'game',title:name.trim(),html:code,savedAt:Date.now()});
+  wsCurrentGame={html:code,title:name.trim()};
+  alert('✅ 游戏「'+name.trim()+'」已保存到仓库');
+});
+// select all
+document.getElementById('cb-selall').addEventListener('click',function(){
+  var el=document.getElementById('cb-code');el.focus();el.select();
+});
+// clear
+document.getElementById('cb-clear').addEventListener('click',function(){
+  if(cbWriting)return;
+  if(cbGetCode()&&!confirm('清空黑板？'))return;
+  cbSetCode('');cbStat('','');
+});
+
 // ══ GAME CODE REVIEW (顾问审查) ══
 function pickReviewModel(){
   var s=loadSettings();var keys=s.keys||{};
@@ -1528,13 +1633,73 @@ var sWrap=document.createElement('div');sWrap.className='msg-wrap ai';
 var sBub=document.createElement('div');sBub.className='bubble stream-cursor';
 sBub.style.cssText='background:'+S.bai+';color:'+S.text+';border:1px solid '+S.border+';box-shadow:'+S.bsh+';font-family:'+S.fc+';border-radius:'+S.r+' '+S.r+' '+S.r+' 3px';
 sWrap.appendChild(sBub);msgs.insertBefore(sWrap,typing);
-var fullText='',codeInd=null,inCode=false;
+var fullText='',inCode=false,boardMode=false;
 var result=await doStream(wsConfig.model,buildWsSys(),ctxMsgs,function(delta,full){
 fullText=full;
-if(full.indexOf('<GAME_HTML>')>=0&&!inCode){inCode=true;sBub.textContent=full.split('<GAME_HTML>')[0].trim();if(!codeInd){codeInd=document.createElement('div');codeInd.className='code-gen-ind';codeInd.innerHTML='⚙ 生成游戏代码 <span id="ws-cc">0</span> 字符';sWrap.appendChild(codeInd);}}
-if(inCode){var gm=full.match(/<GAME_HTML>([\s\S]*?)(?:<\/GAME_HTML>|$)/);var cc=document.getElementById('ws-cc');if(gm&&cc)cc.textContent=gm[1].length;}
-else{sBub.textContent=full;msgs.scrollTop=msgs.scrollHeight;}
+// 检测游戏代码开始 → 切到黑板模式
+if(!boardMode){
+  // 检测<GAME_HTML>标签
+  if(full.indexOf('<GAME_HTML>')>=0){
+    boardMode=true;inCode=true;
+    var before=full.split('<GAME_HTML>')[0].trim();
+    sBub.textContent=before||'📋 代码写入黑板中…';
+    cbShow();cbSetCode('');cbStat('writing','⏳ AI写入中…');cbWriting=true;
+    document.getElementById('cb-code').readOnly=true;
+    var gm=full.match(/<GAME_HTML>([\s\S]*?)(?:<\/GAME_HTML>|$)/);
+    if(gm)cbSetCode(gm[1]);
+    return;
+  }
+  // 检测```html代码块
+  if(full.indexOf('```html')>=0&&full.indexOf('<')>full.indexOf('```html')){
+    boardMode=true;
+    var before2=full.split('```html')[0].trim();
+    sBub.textContent=before2||'📋 代码写入黑板中…';
+    cbShow();cbSetCode('');cbStat('writing','⏳ AI写入中…');cbWriting=true;
+    document.getElementById('cb-code').readOnly=true;
+    var cm=full.match(/```html\s*([\s\S]*?)(?:```|$)/);
+    if(cm)cbSetCode(cm[1]);
+    return;
+  }
+  // 检测裸HTML（必须有<!DOCTYPE或<html 且有<script才是游戏）
+  if((full.indexOf('<!DOCTYPE')>=0||full.indexOf('<html')>=0)&&full.indexOf('<scr')>=0){
+    var htmlStart=full.indexOf('<!DOCTYPE')>=0?full.indexOf('<!DOCTYPE'):full.indexOf('<html');
+    if(full.indexOf('<',htmlStart+1)>=0){
+      boardMode=true;
+      var before3=full.substring(0,htmlStart).trim();
+      sBub.textContent=before3||'📋 代码写入黑板中…';
+      cbShow();cbSetCode(full.substring(htmlStart));cbStat('writing','⏳ AI写入中…');cbWriting=true;
+      document.getElementById('cb-code').readOnly=true;
+      return;
+    }
+  }
+}
+// 黑板模式：增量写入代码
+if(boardMode){
+  if(inCode){
+    var gm2=full.match(/<GAME_HTML>([\s\S]*?)(?:<\/GAME_HTML>|$)/);
+    if(gm2)cbSetCode(gm2[1]);
+  }else{
+    // ```html或裸HTML模式
+    var codeStart=full.indexOf('```html')>=0?full.indexOf('```html'):
+                  (full.indexOf('<!DOCTYPE')>=0?full.indexOf('<!DOCTYPE'):full.indexOf('<html'));
+    if(full.indexOf('```html')>=0){
+      var cm2=full.match(/```html\s*([\s\S]*?)(?:```|$)/);
+      if(cm2)cbSetCode(cm2[1]);
+    }else{
+      cbSetCode(full.substring(codeStart));
+    }
+  }
+  return;
+}
+// 普通模式：写到聊天气泡
+sBub.textContent=full;msgs.scrollTop=msgs.scrollHeight;
 },temp);
+// 流式结束
+if(boardMode){
+  cbWriting=false;
+  document.getElementById('cb-code').readOnly=false;
+  cbStat('done','✅ '+cbGetCode().length+'字符');
+}
 sBub.classList.remove('stream-cursor');sWrap.remove();
 fullText=result.text||fullText;
 var cost=calcCost(result.tIn,result.tOut,wsConfig.model);wsTotalCost+=cost;
@@ -1542,21 +1707,15 @@ document.getElementById('ws-cost-badge').textContent=fmtCost(wsTotalCost);
 var meta=result.tIn>0?('↑'+result.tIn+' ↓'+result.tOut+'  '+fmtCost(cost)):null;
 var cleanReply=fullText,htmlCode=null,themeData=null,gameTitle=null;
 var gm=fullText.match(/<GAME_HTML>([\s\S]*?)<\/GAME_HTML>/);var tm=fullText.match(/<GAME_TITLE>([\s\S]*?)<\/GAME_TITLE>/);
-if(gm){htmlCode=gm[1].trim();gameTitle=tm?tm[1].trim():'新游戏';cleanReply=fullText.replace(/<GAME_HTML>[\s\S]*?<\/GAME_HTML>/,'').replace(/<GAME_TITLE>[\s\S]*?<\/GAME_TITLE>/,'').trim();wsCurrentGame={html:htmlCode,title:gameTitle};}
-// 后备提取：没有<GAME_HTML>标签时，尝试从```html代码块或裸HTML中提取
-if(!htmlCode){
-var hcb=fullText.match(/```html\s*([\s\S]*?)```/);
-if(hcb&&hcb[1].indexOf('<')>=0){htmlCode=hcb[1].trim();cleanReply=fullText.replace(/```html[\s\S]*?```/g,'').trim();}
-}
-if(!htmlCode){
-var hraw=fullText.match(/(<!DOCTYPE[\s\S]*<\/html>)/i);
-if(!hraw)hraw=fullText.match(/(<html[\s\S]*<\/html>)/i);
-if(hraw&&hraw[1].indexOf('<script')>=0){htmlCode=hraw[1].trim();cleanReply=fullText.replace(hraw[0],'').trim();}
-}
-if(htmlCode&&!gameTitle){
-gameTitle=tm?tm[1].trim():'新游戏';
-cleanReply=cleanReply||'✅ 游戏已生成';
-wsCurrentGame={html:htmlCode,title:gameTitle};
+if(gm){htmlCode=gm[1].trim();gameTitle=tm?tm[1].trim():'新游戏';cleanReply=fullText.replace(/<GAME_HTML>[\s\S]*?<\/GAME_HTML>/,'').replace(/<GAME_TITLE>[\s\S]*?<\/GAME_TITLE>/,'').trim();}
+if(!htmlCode){var hcb=fullText.match(/```html\s*([\s\S]*?)```/);if(hcb&&hcb[1].indexOf('<')>=0){htmlCode=hcb[1].trim();cleanReply=fullText.replace(/```html[\s\S]*?```/g,'').trim();}}
+if(!htmlCode){var hraw=fullText.match(/(<!DOCTYPE[\s\S]*<\/html>)/i);if(!hraw)hraw=fullText.match(/(<html[\s\S]*<\/html>)/i);if(hraw&&hraw[1].indexOf('<scr')>=0){htmlCode=hraw[1].trim();cleanReply=fullText.replace(hraw[0],'').trim();}}
+if(htmlCode){
+  gameTitle=gameTitle||(tm?tm[1].trim():'新游戏');
+  wsCurrentGame={html:htmlCode,title:gameTitle};
+  // 确保黑板有代码
+  if(!boardMode){cbShow();cbSetCode(htmlCode);cbStat('done','✅ '+htmlCode.length+'字符');}
+  cleanReply=cleanReply||'✅ 代码已写到黑板上，点 ▶运行 试玩！';
 }
 if(!htmlCode){
 var raw=null;var cb=fullText.match(/`{1,3}(?:json)?\s*([\s\S]*?)`{1,3}/);if(cb)raw=cb[1].trim();
@@ -1574,16 +1733,6 @@ tw.appendChild(btn2);tw.appendChild(bd2);msgs.insertBefore(tw,typing);
 var aid=genId();var aiMsg={role:'assistant',content:cleanReply||'✅ 完成',meta:meta,ts:Date.now(),id:aid};
 wsMsgs.push(aiMsg);saveWsMsgs();renderMsg('ws',aiMsg,wsMsgs.length-1);
 addUsage(wsConfig.model,result.tIn,result.tOut,cost);
-if(htmlCode){
-// ── 顾问审查 ──
-sBub.textContent='🔍 代码审查中…';
-try{var reviewed=await reviewGameCode(htmlCode);if(reviewed)htmlCode=reviewed;}catch(re){console.warn('审查跳过:',re);}
-var wrap2=document.createElement('div');wrap2.className='msg-wrap ai';
-var gameHtml=htmlCode;var gTitle=gameTitle||'游戏';
-var badge=document.createElement('div');badge.style.cssText='display:inline-flex;align-items:center;gap:8px;background:var(--bg);border:1.5px solid var(--border);border-radius:20px;padding:7px 14px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text)';
-badge.innerHTML='<span>🎮</span><span>'+esc(gTitle)+'</span><span style="color:var(--muted)">点击游玩 →</span>';
-badge.onclick=function(){playGame(null,gTitle,gameHtml);};wrap2.appendChild(badge);msgs.insertBefore(wrap2,typing);
-}
 if(themeData){
 var wrap3=document.createElement('div');wrap3.className='msg-wrap ai';
 var saveBtn=document.createElement('button');
