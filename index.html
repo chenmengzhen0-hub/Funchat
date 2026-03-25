@@ -2402,9 +2402,13 @@ function replyToFeed(id) {
 function tryTriggerFeed(chat, aiContent) {
     if (!aiContent) return;
     var lower = aiContent.toLowerCase();
+    // NSFW过滤：包含敏感内容不发动态
+    var nsfwWords = ['胸','奶','裸','脱','吻','舔','摸','喘','呻吟','身体','内衣','内裤','亲密','欲','荡','湿','硬','插','操','fuck','sex','nude','kiss','breast','moan'];
+    var isNSFW = nsfwWords.some(function(w) { return lower.indexOf(w) >= 0; });
+    if (isNSFW) return;
     var keywords = ['分享', '开心', '难过', '生气', '日常', '今天', '心情'];
     var matched = keywords.some(function(kw) { return lower.includes(kw); });
-    if (matched && Math.random() < 0.4) { // 40%概率触发
+    if (matched && Math.random() < 0.4) {
         var mood = 'normal';
         if (lower.includes('开心')) mood = 'happy';
         else if (lower.includes('难过')) mood = 'sad';
