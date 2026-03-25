@@ -1318,7 +1318,7 @@ cdBrand=getBrand(chat.model);
 var bc=document.getElementById('cd-brand');bc.innerHTML='';
 BRANDS.forEach(function(b){
 var sel=b.id===cdBrand;var c=document.createElement('button');c.className='chip'+(sel?' sel':'');c.textContent=(sel?'✓ ':'')+b.name;
-c.onclick=function(){cdBrand=b.id;bc.querySelectorAll('.chip').forEach(function(x){x.classList.remove('sel');x.textContent=x.textContent.replace('✓ ','');});c.classList.add('sel');c.textContent='✓ '+b.name;refreshCdSel(MODELS[b.id][0].id);};
+c.onclick=function(){cdBrand=b.id;bc.querySelectorAll('.chip').forEach(function(x){x.classList.remove('sel');x.textContent=x.textContent.replace('✓ ','');});c.classList.add('sel');c.textContent='✓ '+b.name;var firstModel=MODELS[b.id][0].id;refreshCdSel(firstModel);updChat(curId,function(ch){ch.model=firstModel;});var hd=document.getElementById('convo-hsub');if(hd)hd.textContent=b.name+' '+MODELS[b.id][0].name;};
 bc.appendChild(c);
 });
 refreshCdSel(chat.model);
@@ -1338,7 +1338,7 @@ sel.style.display='block';cg.style.display='none';var md=getMd(selId);
 document.getElementById('cd-temp-grp').style.display=md.thinking?'none':'flex';
 (MODELS[cdBrand]||[]).forEach(function(m){var o=document.createElement('option');o.value=m.id;o.textContent=m.name+(m.thinking?' 🧠':'')+'  ($'+m.in+'/$'+m.out+'/M)';if(m.id===selId)o.selected=true;sel.appendChild(o);});
 }
-function onCdModelChange(){var mid=document.getElementById('cd-model').value;if(mid!=='custom'){var md=getMd(mid);document.getElementById('cd-temp-grp').style.display=md.thinking?'none':'flex';updChat(curId,function(c){c.model=mid;});}}
+function onCdModelChange(){var mid=document.getElementById('cd-model').value;if(mid!=='custom'){var md=getMd(mid);document.getElementById('cd-temp-grp').style.display=md.thinking?'none':'flex';updChat(curId,function(c){c.model=mid;});var b=BRANDS.find(function(x){return x.id===cdBrand;})||BRANDS[0];var hd=document.getElementById('convo-hsub');if(hd)hd.textContent=b.name+' '+md.name;}}
 function saveCdCustom(){var customId=document.getElementById('cd-custom-id').value.trim();if(customId){var finalId=cdBrand==='custom'?('custom::'+customId):customId;updChat(curId,function(c){c.model=finalId;c.customModelId=customId;});}}
 function saveCdSettings(){var temp=parseFloat(document.getElementById('cd-temp').value);var ctx=document.getElementById('cd-ctx').value;var sys=document.getElementById('cd-sys').value;var world=document.getElementById('cd-world').value;updChat(curId,function(c){c.temperature=temp;c.contextLimit=ctx;c.systemPrompt=sys;c.worldBook=world;});}
 function toggleConvoDrawer(){var d=document.getElementById('convo-drawer');if(d.style.transform==='translateX(0px)'){d.style.transform='translateX(100%)';}else{d.style.transform='translateX(0px)';}}
