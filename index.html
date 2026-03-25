@@ -1008,20 +1008,38 @@ if(brand==='anthropic'){
   var antBodyObj={model:model,max_tokens:maxTok,stream:true,system:sys,messages:msgs};
 
   if(_isIOS){
-    // iOS Anthropic: 非流式请求
-    antBodyObj.stream=false;
-    if(onChunk)onChunk('⏳ 生成中…\n','⏳ 生成中…\n');
-    var ra=await fetch(antUrl,{method:'POST',headers:antHdrs,body:JSON.stringify(antBodyObj)});
-    if(!ra.ok){var ea=await ra.json().catch(function(){return{};});throw new Error((ea.error&&ea.error.message)||'HTTP '+ra.status);}
-    var da=await ra.json();
-    var txta='',tIa=0,tOa=0,thka='';
-    if(da.usage){tIa=da.usage.input_tokens||0;tOa=da.usage.output_tokens||0;}
-    if(da.content){for(var ci=0;ci<da.content.length;ci++){
-      if(da.content[ci].type==='text')txta+=da.content[ci].text;
-      if(da.content[ci].type==='thinking')thka+=da.content[ci].thinking;
-    }}
-    if(onChunk)onChunk(txta,txta);
-    return{text:txta,tIn:tIa,tOut:tOa,thinking:thka||null};
+    // iOS Anthropic: fetch流式 + 断点续传（iOS能收~3000字符后断，续传拼完）
+    var acc='',tI=0,tO=0,thk='';
+    var curMsgs=msgs.slice();
+    for(var att=0;att<4;att++){
+      if(onChunk&&att>0)onChunk('\n⚡ 续传('+(att+1)+'/4)…\n',acc+'\n⚡ 续传('+(att+1)+'/4)…\n');
+      try{
+        var ra=await fetch(antUrl,{method:'POST',headers:antHdrs,body:JSON.stringify({model:model,max_tokens:maxTok,stream:true,system:sys,messages:curMsgs})});
+        if(!ra.ok){var ea=await ra.json().catch(function(){return{};});throw new Error((ea.error&&ea.error.message)||'HTTP '+ra.status);}
+        var rdr=ra.body.getReader(),dc=new TextDecoder(),sb='';
+        while(true){var ck=await rdr.read();if(ck.done)break;sb+=dc.decode(ck.value,{stream:true});var ls=sb.split('\n');sb=ls.pop();
+          for(var i=0;i<ls.length;i++){var ln=ls[i];if(ln.indexOf('data:')!==0)continue;var rw=ln.slice(5).trim();if(!rw)continue;
+            try{var jj=JSON.parse(rw);
+              if(jj.type==='message_start')tI=jj.message&&jj.message.usage?jj.message.usage.input_tokens||0:0;
+              if(jj.type==='message_delta')tO=jj.usage?jj.usage.output_tokens||0:0;
+              if(jj.type==='content_block_delta'){
+                if(jj.delta&&jj.delta.type==='text_delta'){acc+=jj.delta.text;if(onChunk)onChunk(jj.delta.text,acc);}
+                if(jj.delta&&jj.delta.type==='thinking_delta')thk+=jj.delta.thinking;
+              }
+            }catch(pe){}
+          }
+        }
+        break; // 正常完成
+      }catch(xe){
+        if(acc.length>50&&!_iosIsComplete(acc)){
+          curMsgs=_iosBuildContinuationMsgs(msgs,acc);
+          continue; // 续传
+        }
+        if(acc.length>50&&_iosIsComplete(acc))break; // 虽然报错但内容完整
+        throw xe;
+      }
+    }
+    return{text:acc,tIn:tI,tOut:tO,thinking:thk||null};
   }
 
   // 桌面 Anthropic: fetch
@@ -1042,20 +1060,37 @@ if(brand==='anthropic'){
   if(brand!=='custom'&&brand!=='gemini')bodyObj.temperature=t;
 
   if(_isIOS){
-    // iOS: 非流式请求（避免长连接被Safari杀掉）
-    bodyObj.stream=false;
-    if(onChunk)onChunk('⏳ 生成中…\n','⏳ 生成中…\n');
-    var r3=await fetch(url,{method:'POST',headers:hdrs,body:JSON.stringify(bodyObj)});
-    if(!r3.ok){var e3=await r3.json().catch(function(){return{};});throw new Error((e3.error&&e3.error.message)||'HTTP '+r3.status);}
-    var d3=await r3.json();
-    var txt3='',tI3=0,tO3=0,thk3='';
-    if(d3.usage){tI3=d3.usage.prompt_tokens||0;tO3=d3.usage.completion_tokens||0;}
-    if(d3.choices&&d3.choices[0]&&d3.choices[0].message){
-      txt3=d3.choices[0].message.content||'';
-      if(d3.choices[0].message.reasoning_content)thk3=d3.choices[0].message.reasoning_content;
+    // iOS 其他品牌: fetch流式 + 断点续传
+    var acc2='',tI2=0,tO2=0,thk2='';
+    var curBodyMsgs=bodyObj.messages.slice();
+    for(var att2=0;att2<4;att2++){
+      if(onChunk&&att2>0)onChunk('\n⚡ 续传('+(att2+1)+'/4)…\n',acc2+'\n⚡ 续传('+(att2+1)+'/4)…\n');
+      try{
+        var sendBody=Object.assign({},bodyObj);sendBody.messages=curBodyMsgs;
+        var rb=await fetch(url,{method:'POST',headers:hdrs,body:JSON.stringify(sendBody)});
+        if(!rb.ok){var eb=await rb.json().catch(function(){return{};});throw new Error((eb.error&&eb.error.message)||'HTTP '+rb.status);}
+        var rdr2=rb.body.getReader(),dc2=new TextDecoder(),sb2='';
+        while(true){var ck2=await rdr2.read();if(ck2.done)break;sb2+=dc2.decode(ck2.value,{stream:true});var ls2=sb2.split('\n');sb2=ls2.pop();
+          for(var i=0;i<ls2.length;i++){var ln2=ls2[i];if(ln2.indexOf('data:')!==0)continue;var rw2=ln2.slice(5).trim();if(rw2==='[DONE]')continue;if(!rw2)continue;
+            try{var jj2=JSON.parse(rw2);
+              if(jj2.usage){tI2=jj2.usage.prompt_tokens||tI2;tO2=jj2.usage.completion_tokens||tO2;}
+              var dt=jj2.choices&&jj2.choices[0]?jj2.choices[0].delta:null;
+              if(dt&&dt.reasoning_content)thk2+=dt.reasoning_content;
+              if(dt&&dt.content){acc2+=dt.content;if(onChunk)onChunk(dt.content,acc2);}
+            }catch(pe){}
+          }
+        }
+        break; // 正常完成
+      }catch(xe){
+        if(acc2.length>50&&!_iosIsComplete(acc2)){
+          curBodyMsgs=_iosBuildContinuationMsgs([{role:'system',content:sys}].concat(cleanMsgs),acc2);
+          continue;
+        }
+        if(acc2.length>50&&_iosIsComplete(acc2))break;
+        throw xe;
+      }
     }
-    if(onChunk)onChunk(txt3,txt3);
-    return{text:txt3,tIn:tI3,tOut:tO3,thinking:thk3||null};
+    return{text:acc2,tIn:tI2,tOut:tO2,thinking:thk2||null};
   }
 
   // 桌面: fetch
