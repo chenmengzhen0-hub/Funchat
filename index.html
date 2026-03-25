@@ -679,7 +679,7 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
 <script>
 // ══ CONSTANTS ══
 const BRANDS=[{id:'anthropic',name:'Claude',color:'#d97706'},{id:'deepseek',name:'DeepSeek',color:'#2563eb'},{id:'moonshot',name:'Kimi',color:'#7c3aed'},{id:'openrouter',name:'OpenRouter',color:'#059669'},{id:'gemini',name:'Gemini',color:'#1a73e8'},{id:'custom',name:'自定义',color:'#64748b'}];
-const MODELS={anthropic:[{id:'claude-sonnet-4-6',name:'Sonnet 4.6',in:3,out:15},{id:'claude-opus-4-6',name:'Opus 4.6',in:5,out:25},{id:'claude-haiku-4-5-20251001',name:'Haiku 4.5',in:1,out:5}],deepseek:[{id:'deepseek-chat',name:'V3.2 Chat',in:0.28,out:0.42},{id:'deepseek-reasoner',name:'R1 Reasoner',in:0.55,out:2.19,thinking:true}],moonshot:[{id:'kimi-k2-0905-preview',name:'K2-0905',in:0.60,out:2.50},{id:'kimi-k2.5',name:'K2.5 Thinking',in:0.60,out:3.00,thinking:true}],openrouter:[{id:'anthropic/claude-sonnet-4-6',name:'Claude Sonnet(OR)',in:3,out:15},{id:'openai/gpt-4o',name:'GPT-4o',in:2.5,out:10},{id:'google/gemini-2.0-flash-exp:free',name:'Gemini 2.0 Free',in:0,out:0},{id:'deepseek/deepseek-chat-v3-0324',name:'DS V3(OR)',in:0.28,out:0.88}],gemini:[{id:'gemini-2.0-flash',name:'Gemini 2.0 Flash',in:0.10,out:0.40},{id:'gemini-2.5-flash-preview',name:'Gemini 2.5 Flash',in:0.15,out:0.60},{id:'gemini-2.5-pro-preview',name:'Gemini 2.5 Pro',in:1.25,out:10}],custom:[{id:'custom-model',name:'自定义模型',in:0,out:0}]};
+const MODELS={anthropic:[{id:'claude-sonnet-4-6',name:'Sonnet 4.6',in:3,out:15},{id:'claude-opus-4-6',name:'Opus 4.6',in:5,out:25},{id:'claude-haiku-4-5-20251001',name:'Haiku 4.5',in:1,out:5}],deepseek:[{id:'deepseek-chat',name:'V3.2 Chat',in:0.28,out:0.42},{id:'deepseek-reasoner',name:'R1 Reasoner',in:0.55,out:2.19,thinking:true}],moonshot:[{id:'kimi-k2-0905-preview',name:'K2-0905',in:0.60,out:2.50},{id:'kimi-k2.5',name:'K2.5 Thinking',in:0.60,out:3.00,thinking:true}],openrouter:[{id:'anthropic/claude-sonnet-4-6',name:'Claude Sonnet(OR)',in:3,out:15},{id:'openai/gpt-4o',name:'GPT-4o',in:2.5,out:10},{id:'google/gemini-2.0-flash-exp:free',name:'Gemini 2.0 Free',in:0,out:0},{id:'deepseek/deepseek-chat-v3-0324',name:'DS V3(OR)',in:0.28,out:0.88}],gemini:[{id:'gemini-2.0-flash',name:'Gemini 2.0 Flash',in:0.10,out:0.40},{id:'gemini-2.0-flash-lite',name:'2.0 Flash-Lite',in:0.04,out:0.16},{id:'gemini-2.5-flash',name:'Gemini 2.5 Flash',in:0.15,out:0.60,thinking:true},{id:'gemini-2.5-pro',name:'Gemini 2.5 Pro',in:1.25,out:10,thinking:true}],custom:[{id:'custom-model',name:'自定义模型',in:0,out:0}]};
 const API_URLS={deepseek:'https://api.deepseek.com/v1/chat/completions',moonshot:'https://api.moonshot.cn/v1/chat/completions',openrouter:'https://openrouter.ai/api/v1/chat/completions',gemini:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'};
 const EMOJIS=['🤖','🌙','⭐','🔮','🎭','🌸','🦋','🐼','🦊','🎨','🌊','🔥','💎','🎸','🍀','🌈','🐉','🦄','🌺','🎯','🐣','🍭','🌻','🦁','🐧','🐱','🐸','🦖','🍄','🧸'];
 const FONTS={'DM Sans':{css:'DM Sans,sans-serif',zh:false},'Nunito':{css:'Nunito,sans-serif',zh:false},'Orbitron':{css:'Orbitron,sans-serif',zh:false},'Space Mono':{css:'Space Mono,monospace',zh:false},'Caveat':{css:'Caveat,cursive',zh:false},'Pacifico':{css:'Pacifico,cursive',zh:false},'Ma Shan Zheng':{css:'Ma Shan Zheng,serif',zh:true},'Noto Serif SC':{css:'Noto Serif SC,serif',zh:true},'ZCOOL XiaoWei':{css:'ZCOOL XiaoWei,serif',zh:true},'ZCOOL KuaiLe':{css:'ZCOOL KuaiLe,sans-serif',zh:true},'Long Cang':{css:'Long Cang,cursive',zh:true},'Liu Jian Mao Cao':{css:'Liu Jian Mao Cao,cursive',zh:true}};
@@ -937,74 +937,133 @@ return args.message||'🎵 好的';
 return'OK';
 }
 
+// ══ iOS DETECTION ══
+var _isIOS = (function(){
+  var ua=navigator.userAgent;
+  // 必须有 Mobile 或 iPhone/iPad/iPod 才算真iOS，排除Mac桌面
+  if(/iPhone|iPod/.test(ua)) return true;
+  if(/iPad/.test(ua)) return true;
+  // iPadOS 13+ 伪装成 Mac，但有触摸且UA里有 Mobile
+  if(navigator.platform==='MacIntel' && navigator.maxTouchPoints>1 && /Mobile/.test(ua)) return true;
+  return false;
+})();
+
+// ══ XHR STREAMING (iOS fallback) ══
+function doStreamXHR(url, headers, bodyStr, onData) {
+  return new Promise(function(resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    Object.keys(headers).forEach(function(k) { xhr.setRequestHeader(k, headers[k]); });
+    var lastIdx = 0;
+    xhr.onprogress = function() {
+      var newText = xhr.responseText.substring(lastIdx);
+      lastIdx = xhr.responseText.length;
+      if (newText && onData) onData(newText);
+    };
+    xhr.onload = function() {
+      var tail = xhr.responseText.substring(lastIdx);
+      if (tail && onData) onData(tail);
+      resolve();
+    };
+    xhr.onerror = function() { reject(new Error('XHR network error')); };
+    xhr.ontimeout = function() { reject(new Error('XHR timeout')); };
+    xhr.send(bodyStr);
+  });
+}
+
+// ══ iOS RESUME HELPERS ══
+function _iosIsComplete(text) {
+  return text.indexOf('</GAME_HTML>') >= 0;
+}
+function _iosBuildContinuationMsgs(msgs, accumulated) {
+  return msgs.concat([
+    { role: 'assistant', content: accumulated },
+    { role: 'user', content: '请继续从中断处直接输出剩余内容，不要重复已有部分' }
+  ]);
+}
+
 // ══ WORKSHOP STREAMING API ══
-// Safari 18+/iOS bug: keep-alive 连接复用导致 TypeError: Load failed
-// 解法: cache:'no-store' 避免连接复用 + 失败自动重试
-var _isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-
-// Safari 18 keep-alive bug workaround: 整个请求+读取body都要retry
-async function safeFetchJSON(url,hdrs,bodyObj,maxRetry){
-var bodyStr=JSON.stringify(bodyObj);
-var lastErr;
-for(var attempt=0;attempt<(maxRetry||3);attempt++){
-if(attempt>0){console.warn('Retry attempt '+(attempt+1));await new Promise(function(r){setTimeout(r,800+attempt*800);});}
-try{
-var r=await fetch(url,{method:'POST',cache:'no-store',headers:hdrs,body:bodyStr});
-var d=await r.json();
-return d;
-}catch(e){lastErr=e;console.warn('safeFetchJSON attempt '+(attempt+1)+' failed:',e.message);}
-}
-throw lastErr;
-}
-
 async function doStream(model,sys,msgs,onChunk,temp){
 var brand=getBrand(model);
-var maxTok=brand==='anthropic'?16384:8192;var s=loadSettings();
+var s=loadSettings();
+
+// ── iOS: 非Anthropic非Gemini品牌自动切Gemini Flash（如果有Key） ──
+if(_isIOS && brand!=='anthropic' && brand!=='gemini'){
+  var gemKey=(s.keys||{}).gemini||'';
+  if(gemKey){
+    model='gemini-2.0-flash'; brand='gemini';
+    if(onChunk) onChunk('[iOS加速] 使用Gemini Flash\n','[iOS加速] 使用Gemini Flash\n');
+  }
+}
+
+var maxTok=brand==='anthropic'?16384:8192;
 var apiKey=brand==='custom'?(s.keys?s.keys.custom:''):((s.keys||{})[brand]||'');
 if(!apiKey)throw new Error('请先在设置⚙里填写 '+(BRANDS.find(function(b){return b.id===brand;})||{name:brand}).name+' 的 API Key');
 var md=getMd(model);var t=temp!==undefined?temp:(md.thinking?1:0.8);
+
 if(brand==='anthropic'){
-if(_isIOS){
-// iOS Anthropic: 非流式 + safeFetchJSON (retry整个请求+读body)
-var d=await safeFetchJSON('https://api.anthropic.com/v1/messages',{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},{model:model,max_tokens:maxTok,stream:false,system:sys,messages:msgs},3);
-if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
-var text='',thinking='',tIn=d.usage?d.usage.input_tokens||0:0,tOut=d.usage?d.usage.output_tokens||0:0;
-(d.content||[]).forEach(function(b){if(b.type==='text')text+=b.text;if(b.type==='thinking')thinking+=b.thinking;});
-if(onChunk)onChunk(text,text);
-return{text:text,tIn:tIn,tOut:tOut,thinking:thinking||null};
-}
-// Desktop Anthropic: 原版流式
-var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:model,max_tokens:maxTok,stream:true,system:sys,messages:msgs})});
-if(!r.ok){var e=await r.json().catch(function(){return{};});throw new Error((e.error&&e.error.message)||'HTTP '+r.status);}
-var reader=r.body.getReader();var dec=new TextDecoder();var buf='',text='',tIn=0,tOut=0,thinking='';
-while(true){var chunk=await reader.read();if(chunk.done)break;buf+=dec.decode(chunk.value,{stream:true});var lines=buf.split('\n');buf=lines.pop();for(var i=0;i<lines.length;i++){var line=lines[i];if(line.indexOf('data:')!==0)continue;var raw=line.slice(5).trim();if(!raw)continue;try{var j=JSON.parse(raw);if(j.type==='message_start')tIn=j.message&&j.message.usage?j.message.usage.input_tokens||0:0;if(j.type==='message_delta')tOut=j.usage?j.usage.output_tokens||0:0;if(j.type==='content_block_delta'){if(j.delta&&j.delta.type==='text_delta'){text+=j.delta.text;if(onChunk)onChunk(j.delta.text,text);}if(j.delta&&j.delta.type==='thinking_delta')thinking+=j.delta.thinking;}}catch(e){}}}
-return{text:text,tIn:tIn,tOut:tOut,thinking:thinking||null};
+  // ── Anthropic ──
+  var antUrl='https://api.anthropic.com/v1/messages';
+  var antHdrs={'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
+  var antBodyObj={model:model,max_tokens:maxTok,stream:true,system:sys,messages:msgs};
+
+  if(_isIOS){
+    // iOS Anthropic: 非流式请求
+    antBodyObj.stream=false;
+    if(onChunk)onChunk('⏳ 生成中…\n','⏳ 生成中…\n');
+    var ra=await fetch(antUrl,{method:'POST',headers:antHdrs,body:JSON.stringify(antBodyObj)});
+    if(!ra.ok){var ea=await ra.json().catch(function(){return{};});throw new Error((ea.error&&ea.error.message)||'HTTP '+ra.status);}
+    var da=await ra.json();
+    var txta='',tIa=0,tOa=0,thka='';
+    if(da.usage){tIa=da.usage.input_tokens||0;tOa=da.usage.output_tokens||0;}
+    if(da.content){for(var ci=0;ci<da.content.length;ci++){
+      if(da.content[ci].type==='text')txta+=da.content[ci].text;
+      if(da.content[ci].type==='thinking')thka+=da.content[ci].thinking;
+    }}
+    if(onChunk)onChunk(txta,txta);
+    return{text:txta,tIn:tIa,tOut:tOa,thinking:thka||null};
+  }
+
+  // 桌面 Anthropic: fetch
+  var r=await fetch(antUrl,{method:'POST',headers:antHdrs,body:JSON.stringify(antBodyObj)});
+  if(!r.ok){var e=await r.json().catch(function(){return{};});throw new Error((e.error&&e.error.message)||'HTTP '+r.status);}
+  var reader=r.body.getReader();var dec=new TextDecoder();var buf='',text='',tIn=0,tOut=0,thinking='';
+  while(true){var chunk=await reader.read();if(chunk.done)break;buf+=dec.decode(chunk.value,{stream:true});var lines=buf.split('\n');buf=lines.pop();for(var i=0;i<lines.length;i++){var line=lines[i];if(line.indexOf('data:')!==0)continue;var raw=line.slice(5).trim();if(!raw)continue;try{var j=JSON.parse(raw);if(j.type==='message_start')tIn=j.message&&j.message.usage?j.message.usage.input_tokens||0:0;if(j.type==='message_delta')tOut=j.usage?j.usage.output_tokens||0:0;if(j.type==='content_block_delta'){if(j.delta&&j.delta.type==='text_delta'){text+=j.delta.text;if(onChunk)onChunk(j.delta.text,text);}if(j.delta&&j.delta.type==='thinking_delta')thinking+=j.delta.thinking;}}catch(e){}}}
+  return{text:text,tIn:tIn,tOut:tOut,thinking:thinking||null};
+
 }else{
-var url=API_URLS[brand]||'';if(brand==='custom'){url=(s.customUrl||'');if(!url)throw new Error('请在设置里填写自定义API地址');}
-var cleanMsgs=msgs.map(function(m){return{role:m.role,content:m.content||''};}).filter(function(m){return['user','assistant'].indexOf(m.role)>=0&&m.content.trim();});
-if((brand==='custom'||brand==='gemini')&&cleanMsgs.length>0&&cleanMsgs[cleanMsgs.length-1].role==='assistant')cleanMsgs=cleanMsgs.slice(0,-1);
-var hdrs={'Content-Type':'application/json','Authorization':'Bearer '+apiKey};
-if(brand==='openrouter'||brand==='gemini'){hdrs['HTTP-Referer']='https://aistudio.app';hdrs['X-Title']='AI Studio';}
-if(_isIOS){
-// iOS 非Anthropic: 非流式 + safeFetchJSON (retry)
-var bObj={model:model,max_tokens:maxTok,stream:false,messages:[{role:'system',content:sys}].concat(cleanMsgs)};
-if(brand!=='custom'&&brand!=='gemini')bObj.temperature=t;
-var d2=await safeFetchJSON(url,hdrs,bObj,3);
-if(d2.error)throw new Error(d2.error.message||String(d2.error));
-var tIn2=d2.usage?d2.usage.prompt_tokens||0:0,tOut2=d2.usage?d2.usage.completion_tokens||0:0;
-var ch2=d2.choices&&d2.choices[0];var text2=ch2?(ch2.message.content||''):'';var thinking2=ch2?(ch2.message.reasoning_content||''):'';
-if(Array.isArray(text2))text2=text2.map(function(x){return x.text||x.content||'';}).join('');
-if(onChunk)onChunk(text2,text2);
-return{text:text2,tIn:tIn2,tOut:tOut2,thinking:thinking2||null};
-}
-// Desktop: 原版流式
-var body={model:model,max_tokens:maxTok,stream:true,messages:[{role:'system',content:sys}].concat(cleanMsgs)};
-if(brand!=='custom'&&brand!=='gemini')body.temperature=t;
-var r2=await fetch(url,{method:'POST',headers:hdrs,body:JSON.stringify(body)});
-if(!r2.ok){var e2=await r2.json().catch(function(){return{};});throw new Error((e2.error&&e2.error.message)||'HTTP '+r2.status);}
-var reader2=r2.body.getReader();var dec2=new TextDecoder();var buf2='',text2='',tIn2=0,tOut2=0,thinking2='';
-while(true){var chunk2=await reader2.read();if(chunk2.done)break;buf2+=dec2.decode(chunk2.value,{stream:true});var lines2=buf2.split('\n');buf2=lines2.pop();for(var i=0;i<lines2.length;i++){var line2=lines2[i];if(line2.indexOf('data:')!==0)continue;var raw2=line2.slice(5).trim();if(raw2==='[DONE]')break;if(!raw2)continue;try{var j2=JSON.parse(raw2);if(j2.usage){tIn2=j2.usage.prompt_tokens||tIn2;tOut2=j2.usage.completion_tokens||tOut2;}var delta=j2.choices&&j2.choices[0]?j2.choices[0].delta:null;if(delta&&delta.reasoning_content)thinking2+=delta.reasoning_content;if(delta&&delta.content){text2+=delta.content;if(onChunk)onChunk(delta.content,text2);}}catch(e){}}}
-return{text:text2,tIn:tIn2,tOut:tOut2,thinking:thinking2||null};
+  // ── 其他品牌 (DeepSeek/Kimi/OpenRouter/Gemini/Custom) ──
+  var url=API_URLS[brand]||'';if(brand==='custom'){url=(s.customUrl||'');if(!url)throw new Error('请在设置里填写自定义API地址');}
+  var cleanMsgs=msgs.map(function(m){return{role:m.role,content:m.content||''};}).filter(function(m){return['user','assistant'].indexOf(m.role)>=0&&m.content.trim();});
+  if((brand==='custom'||brand==='gemini')&&cleanMsgs.length>0&&cleanMsgs[cleanMsgs.length-1].role==='assistant')cleanMsgs=cleanMsgs.slice(0,-1);
+  var hdrs={'Content-Type':'application/json','Authorization':'Bearer '+apiKey};
+  if(brand==='openrouter'||brand==='gemini'){hdrs['HTTP-Referer']='https://aistudio.app';hdrs['X-Title']='AI Studio';}
+  var bodyObj={model:model,max_tokens:maxTok,stream:true,messages:[{role:'system',content:sys}].concat(cleanMsgs)};
+  if(brand!=='custom'&&brand!=='gemini')bodyObj.temperature=t;
+
+  if(_isIOS){
+    // iOS: 非流式请求（避免长连接被Safari杀掉）
+    bodyObj.stream=false;
+    if(onChunk)onChunk('⏳ 生成中…\n','⏳ 生成中…\n');
+    var r3=await fetch(url,{method:'POST',headers:hdrs,body:JSON.stringify(bodyObj)});
+    if(!r3.ok){var e3=await r3.json().catch(function(){return{};});throw new Error((e3.error&&e3.error.message)||'HTTP '+r3.status);}
+    var d3=await r3.json();
+    var txt3='',tI3=0,tO3=0,thk3='';
+    if(d3.usage){tI3=d3.usage.prompt_tokens||0;tO3=d3.usage.completion_tokens||0;}
+    if(d3.choices&&d3.choices[0]&&d3.choices[0].message){
+      txt3=d3.choices[0].message.content||'';
+      if(d3.choices[0].message.reasoning_content)thk3=d3.choices[0].message.reasoning_content;
+    }
+    if(onChunk)onChunk(txt3,txt3);
+    return{text:txt3,tIn:tI3,tOut:tO3,thinking:thk3||null};
+  }
+
+  // 桌面: fetch
+  var r2=await fetch(url,{method:'POST',headers:hdrs,body:JSON.stringify(bodyObj)});
+  if(!r2.ok){var e2=await r2.json().catch(function(){return{};});throw new Error((e2.error&&e2.error.message)||'HTTP '+r2.status);}
+  var reader2=r2.body.getReader();var dec2=new TextDecoder();var buf2='',text2='',tIn2=0,tOut2=0,thinking2='';
+  while(true){var chunk2=await reader2.read();if(chunk2.done)break;buf2+=dec2.decode(chunk2.value,{stream:true});var lines2=buf2.split('\n');buf2=lines2.pop();for(var i=0;i<lines2.length;i++){var line2=lines2[i];if(line2.indexOf('data:')!==0)continue;var raw2=line2.slice(5).trim();if(raw2==='[DONE]')break;if(!raw2)continue;try{var j2=JSON.parse(raw2);if(j2.usage){tIn2=j2.usage.prompt_tokens||tIn2;tOut2=j2.usage.completion_tokens||tOut2;}var delta=j2.choices&&j2.choices[0]?j2.choices[0].delta:null;if(delta&&delta.reasoning_content)thinking2+=delta.reasoning_content;if(delta&&delta.content){text2+=delta.content;if(onChunk)onChunk(delta.content,text2);}}catch(e){}}}
+  return{text:text2,tIn:tIn2,tOut:tOut2,thinking:thinking2||null};
 }
 }
 
@@ -1354,6 +1413,48 @@ function clearWsMsgs(){if(!confirm('确定清空工坊对话？'))return;wsMsgs=
 function saveWsTheme(){if(!curTheme){alert('当前没有应用主题,先让AI生成一个吧！');return;}var name=prompt('给主题起个名字:','我的主题');if(!name||!name.trim())return;addVault({id:genId(),type:'theme',title:name.trim(),params:curTheme,savedAt:Date.now()});saveGlobalTheme(Object.assign({},curTheme,{_fromVault:true}));petOnTheme();alert('✅ 主题「'+name.trim()+'」已保存到仓库');}
 function saveWsGame(){if(!wsCurrentGame){alert('当前没有游戏,先让AI生成一个吧！');return;}var name=prompt('给游戏起个名字:',wsCurrentGame.title||'我的游戏');if(!name||!name.trim())return;addVault({id:genId(),type:'game',title:name.trim(),html:wsCurrentGame.html,savedAt:Date.now()});alert('✅ 游戏「'+name.trim()+'」已保存到仓库');}
 function openWsCost(){alert('工坊本次累计费用:'+fmtCost(wsTotalCost));}
+// ══ GAME CODE REVIEW (顾问审查) ══
+function pickReviewModel(){
+  var s=loadSettings();var keys=s.keys||{};
+  // 优先级：Gemini Flash > DeepSeek > Haiku > 用户当前模型
+  if(keys.gemini) return {model:'gemini-2.0-flash',brand:'gemini'};
+  if(keys.deepseek) return {model:'deepseek-chat',brand:'deepseek'};
+  if(keys.anthropic) return {model:'claude-haiku-4-5-20251001',brand:'anthropic'};
+  // 用户当前模型
+  var curBrand=getBrand(wsConfig.model);
+  var curKey=curBrand==='custom'?(keys.custom||''):(keys[curBrand]||'');
+  if(curKey) return {model:wsConfig.model,brand:curBrand};
+  return null;
+}
+
+async function reviewGameCode(code){
+  var rm=pickReviewModel();
+  if(!rm) return null; // 没有可用模型就跳过审查
+  var reviewSys='你是代码审查员。检查以下HTML游戏代码的语法错误。只检查：未闭合标签、JS语法错误、缺少分号/括号、变量未定义。如果没有问题，回复OK。如果有问题，直接输出修复后的完整代码，不要解释。';
+  var reviewMsgs=[{role:'user',content:code}];
+  try{
+    var result=await doStream(rm.model,reviewSys,reviewMsgs,null,0.1);
+    var reply=(result.text||'').trim();
+    if(reply==='OK'||reply.indexOf('没有')>=0||reply.indexOf('正确')>=0||reply.indexOf('no ')>=0||reply.length<20){
+      return null; // 代码没问题
+    }
+    // 提取修复后的代码
+    var hm=reply.match(/<html[\s\S]*<\/html>/i);
+    if(hm) return hm[0];
+    var dm=reply.match(/<!DOCTYPE[\s\S]*<\/html>/i);
+    if(dm) return dm[0];
+    // 尝试提取代码块
+    var cm=reply.match(/```(?:html)?\s*([\s\S]*?)```/);
+    if(cm) return cm[1].trim();
+    // 如果回复本身就像完整HTML
+    if(reply.indexOf('<html')>=0||reply.indexOf('<!DOCTYPE')>=0) return reply;
+    return null;
+  }catch(e){
+    console.warn('审查失败:',e);
+    return null; // 审查失败就跳过
+  }
+}
+
 async function wsSend(){
 var ta=document.getElementById('ws-in');var text=ta.value.trim();
 if(!text||isWsSending)return;
@@ -1367,9 +1468,8 @@ var md=getMd(wsConfig.model);var temp=md.thinking?1:(wsConfig.temperature||0.8);
 try{
 var S=getBubSnap();var typing=document.getElementById('ws-typing');
 var sWrap=document.createElement('div');sWrap.className='msg-wrap ai';
-var sBub=document.createElement('div');sBub.className='bubble'+(_isIOS?'':' stream-cursor');
+var sBub=document.createElement('div');sBub.className='bubble stream-cursor';
 sBub.style.cssText='background:'+S.bai+';color:'+S.text+';border:1px solid '+S.border+';box-shadow:'+S.bsh+';font-family:'+S.fc+';border-radius:'+S.r+' '+S.r+' '+S.r+' 3px';
-if(_isIOS)sBub.textContent='⏳ AI thinking...';
 sWrap.appendChild(sBub);msgs.insertBefore(sWrap,typing);
 var fullText='',codeInd=null,inCode=false;
 var result=await doStream(wsConfig.model,buildWsSys(),ctxMsgs,function(delta,full){
@@ -1403,6 +1503,9 @@ var aid=genId();var aiMsg={role:'assistant',content:cleanReply||'✅ 完成',met
 wsMsgs.push(aiMsg);saveWsMsgs();renderMsg('ws',aiMsg,wsMsgs.length-1);
 addUsage(wsConfig.model,result.tIn,result.tOut,cost);
 if(htmlCode){
+// ── 顾问审查 ──
+sBub.textContent='🔍 代码审查中…';
+try{var reviewed=await reviewGameCode(htmlCode);if(reviewed)htmlCode=reviewed;}catch(re){console.warn('审查跳过:',re);}
 var wrap2=document.createElement('div');wrap2.className='msg-wrap ai';
 var gameHtml=htmlCode;var gTitle=gameTitle||'游戏';
 var badge=document.createElement('div');badge.style.cssText='display:inline-flex;align-items:center;gap:8px;background:var(--bg);border:1.5px solid var(--border);border-radius:20px;padding:7px 14px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text)';
@@ -1420,8 +1523,7 @@ wrap3.appendChild(saveBtn);msgs.insertBefore(wrap3,typing);
 }
 msgs.scrollTop=msgs.scrollHeight;
 }catch(e){
-var diag='❌ '+e.message+'\n\n📋 诊断信息:\n- 错误类型: '+e.name+'\n- 浏览器: '+navigator.userAgent.slice(0,80)+'\n- 模型: '+wsConfig.model+'\n- 已收到: '+(fullText?fullText.length:0)+' 字符';
-var eid=genId();wsMsgs.push({role:'assistant',content:diag,id:eid});saveWsMsgs();renderMsg('ws',{role:'assistant',content:diag,id:eid},wsMsgs.length-1);
+var err='❌ '+e.message;var eid=genId();wsMsgs.push({role:'assistant',content:err,id:eid});saveWsMsgs();renderMsg('ws',{role:'assistant',content:err,id:eid},wsMsgs.length-1);
 }finally{isWsSending=false;updateSend('ws');document.getElementById('ws-msgs').scrollTop=99999;}
 }
 
