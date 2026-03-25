@@ -2352,7 +2352,7 @@ function renderFeed() {
             '<button class="feed-like-btn" onclick="event.stopPropagation();likeFeed(\'' + feed.id + '\')">❤️ ' + (feed.likes || 0) + '</button>' +
             '<button class="feed-like-btn" onclick="event.stopPropagation();replyToFeed(\'' + feed.id + '\')">💬 回复</button>' +
             '</div>' +
-            (feed.reply ? '<div style="margin-top:8px;padding:8px;background:rgba(0,0,0,0.03);border-radius:12px;font-size:12px;color:var(--muted)"><span style="font-weight:600">🤖 AI回复：</span>' + esc(feed.reply) + '</div>' : '') +
+            (feed.reply ? '<div style="margin-top:8px;padding:8px;background:rgba(0,0,0,0.03);border-radius:12px;font-size:12px;color:var(--muted)"><span style="font-weight:600">' + (feed.replyFromAI ? '🤖 AI回复：' : '🙋 我：') + '</span>' + esc(feed.reply) + '</div>' : '') +
             '</div>';
     }).join('');
 }
