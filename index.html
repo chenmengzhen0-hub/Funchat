@@ -1232,8 +1232,8 @@ var S=getBubSnap();var bg=document.documentElement.style.getPropertyValue('--bg'
 if(m.thinking&&m.role==='assistant'){
 var tw=document.createElement('div');tw.className='think-wrap';
 var tb=document.createElement('button');tb.className='think-toggle';
-var thinkCol=autoTxt(bgColor);tb.style.color=thinkCol;tb.innerHTML='🧠 思考过程 ▸';
-var bd=document.createElement('div');bd.className='think-body';bd.textContent=m.thinking;bd.style.color=thinkCol;bd.style.background=lum(bgColor)>.5?'rgba(0,0,0,.07)':'rgba(255,255,255,.1)';
+var thinkCol=autoTxt(bg);tb.style.color=thinkCol;tb.innerHTML='🧠 思考过程 ▸';
+var bd=document.createElement('div');bd.className='think-body';bd.textContent=m.thinking;bd.style.color=thinkCol;bd.style.background=lum(bg)>.5?'rgba(0,0,0,.07)':'rgba(255,255,255,.1)';
 tb.onclick=function(){bd.classList.toggle('open');tb.innerHTML=bd.classList.contains('open')?'🧠 思考过程 ▾':'🧠 思考过程 ▸';};
 tw.appendChild(tb);tw.appendChild(bd);msgsEl.insertBefore(tw,typingEl);
 }
