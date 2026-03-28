@@ -177,6 +177,95 @@ html,body{height:100%;overflow:hidden;background:#f5f5f3}
 .send-btn{width:38px;height:38px;border-radius:10px;border:none;background:var(--border);color:var(--muted);font-size:18px;cursor:default;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
 .send-btn.on{background:var(--bu);color:var(--but);cursor:pointer}
 .input-area{background:var(--bg);border-top:1px solid rgba(0,0,0,.08);padding:8px 10px;display:flex;gap:8px;align-items:flex-end;flex-shrink:0;padding-bottom:max(8px,env(safe-area-inset-bottom));transition:background .4s}
+/* Plus panel */
+.plus-btn{width:38px;height:38px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.plus-btn:active{background:var(--accent);color:#fff;border-color:var(--accent)}
+#plus-panel{position:absolute;bottom:100%;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:14px 16px;display:none;gap:18px;flex-wrap:wrap;z-index:20;animation:slideIn .18s ease}
+#plus-panel.open{display:flex}
+.plus-item{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.plus-item:active .plus-icon{transform:scale(.9)}
+.plus-icon{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;transition:transform .1s}
+.plus-label{font-size:11px;color:var(--muted);font-weight:600}
+/* ── 红包气泡（微信橙色风格）── */
+.bubble-hongbao{background:linear-gradient(135deg,#f5a500,#e8870a);border-radius:8px;overflow:hidden;width:220px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;position:relative}
+.hb-bub-inner{display:flex;align-items:center;gap:12px;padding:14px 14px 10px}
+.hb-bub-icon{width:48px;height:48px;background:#e05000;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative}
+.hb-bub-icon::after{content:'¥';position:absolute;font-size:22px;font-weight:900;color:#f5a500;font-family:serif}
+.hb-bub-text{flex:1;min-width:0}
+.hb-bub-greeting{font-size:15px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-bub-sub{font-size:11px;color:rgba(255,255,255,.75);margin-top:3px}
+.hb-bub-footer{border-top:1px solid rgba(0,0,0,.1);padding:6px 14px;display:flex;align-items:center;justify-content:space-between}
+.hb-bub-type{font-size:11px;color:rgba(255,255,255,.7)}
+.hb-bub-name{font-size:11px;color:rgba(255,255,255,.7)}
+/* ── 转账气泡（微信橙色风格）── */
+.bubble-transfer{background:linear-gradient(135deg,#f5a500,#e8870a);border-radius:8px;overflow:hidden;width:220px;cursor:default}
+.bubble-transfer.ai-gift{cursor:pointer}
+.tf-bub-inner{display:flex;align-items:center;gap:12px;padding:14px 14px 10px}
+.tf-bub-icon{width:48px;height:48px;border-radius:50%;border:3px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tf-bub-check{width:22px;height:22px;border-radius:50%;border:2.5px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center}
+.tf-bub-check::after{content:'✓';font-size:14px;color:rgba(255,255,255,.9);font-weight:700;margin-top:-1px}
+.tf-bub-right{flex:1;min-width:0}
+.tf-bub-amount{font-size:22px;font-weight:700;color:#fff;line-height:1.1}
+.tf-bub-amount span{font-size:13px;font-weight:400;margin-right:1px}
+.tf-bub-status{font-size:13px;color:rgba(255,255,255,.85);margin-top:3px}
+.tf-bub-footer{border-top:1px solid rgba(0,0,0,.1);padding:6px 14px}
+.tf-bub-label{font-size:11px;color:rgba(255,255,255,.7)}
+/* ── 红包弹窗（全屏红色+大圆開按钮）── */
+#hb-modal{position:fixed;inset:0;z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.5)}
+#hb-modal.open{display:flex}
+#hb-box{position:relative;width:min(88vw,320px);border-radius:12px;overflow:hidden;animation:modalIn .28s ease;display:flex;flex-direction:column}
+.hb-box-red{background:#e8351e;padding:52px 24px 80px;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;min-height:260px}
+.hb-box-from{font-size:13px;color:rgba(255,255,255,.8);margin-top:8px}
+.hb-box-title{font-size:19px;font-weight:700;color:#fff;text-align:center;padding:0 16px;line-height:1.4}
+/* 弧形底部分隔 */
+.hb-box-red::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:60px;background:#c0271a;border-radius:50% 50% 0 0/100% 100% 0 0}
+.hb-box-bottom{background:#c0271a;padding:24px 24px 28px;display:flex;flex-direction:column;align-items:center}
+/* 大圆開按钮 */
+.hb-open-btn{width:90px;height:90px;border-radius:50%;border:none;background:radial-gradient(circle at 40% 35%,#f0d080,#c8a035);color:#7a4a00;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);transition:transform .12s;font-family:'Ma Shan Zheng',serif;letter-spacing:0;display:flex;align-items:center;justify-content:center;margin-top:-45px;position:relative;z-index:1}
+.hb-open-btn:active{transform:scale(.93)}
+#hb-close{position:absolute;bottom:-70px;left:50%;transform:translateX(-50%);width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.4);background:transparent;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+/* ── 发送输入弹窗 ── */
+#send-modal{position:fixed;inset:0;z-index:998;display:none;align-items:flex-end;justify-content:center}
+#send-modal.open{display:flex}
+#send-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4)}
+#send-box{position:relative;z-index:1;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 20px max(24px,env(safe-area-inset-bottom));width:100%;max-width:480px;animation:modalIn .22s ease;display:flex;flex-direction:column;gap:14px}
+.sm-title{font-size:16px;font-weight:700;color:var(--text);text-align:center}
+.sm-to{font-size:13px;color:var(--muted);text-align:center;margin-top:-8px}
+.sm-amount-row{display:flex;align-items:center;gap:4px;border-bottom:2px solid var(--border);padding-bottom:10px;margin-top:4px}
+.sm-yuan{font-size:26px;color:var(--muted);font-weight:300}
+#sm-amount{flex:1;border:none;outline:none;font-size:36px;font-weight:700;color:var(--text);background:transparent;font-family:var(--fu)}
+.sm-note-inp{border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;background:var(--bg);color:var(--text);width:100%;font-family:var(--fu)}
+.sm-note-inp:focus{outline:none;border-color:var(--accent)}
+.sm-confirm{padding:14px;border-radius:12px;border:none;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s}
+.sm-confirm:active{transform:scale(.97)}
+/* 表情包面板 */
+#sticker-panel{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:200;display:none;flex-direction:column;height:180px;box-shadow:0 -4px 20px rgba(0,0,0,.12)}
+#sticker-panel.open{display:flex}
+.sticker-tabs{display:flex;border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;padding:0 4px;gap:0;background:var(--surface)}
+.sticker-tabs::-webkit-scrollbar{height:0}
+.sticker-tab{padding:5px 8px;font-size:18px;cursor:pointer;border-bottom:2px solid transparent;flex-shrink:0;transition:border-color .15s}
+.sticker-tab.active{border-bottom-color:var(--accent)}
+.sticker-tab-add{padding:5px 8px;font-size:14px;color:var(--muted);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.sticker-grid{flex:1;overflow-y:auto;padding:6px 8px;display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.sticker-cell{aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:transform .1s;position:relative}
+.sticker-cell:active{transform:scale(.85)}
+.sticker-cell img{width:100%;height:100%;object-fit:contain;pointer-events:none}
+.sticker-cell .sticker-emoji{font-size:22px;line-height:1}
+.sticker-cell .sticker-del{position:absolute;top:1px;right:1px;width:14px;height:14px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:9px;display:none;align-items:center;justify-content:center;cursor:pointer}
+.sticker-editing .sticker-del{display:flex}
+/* 表情包气泡 */
+.bubble-sticker{background:transparent!important;border:none!important;box-shadow:none!important;padding:2px 0!important}
+.bubble-sticker img{width:100px;height:100px;object-fit:contain;border-radius:8px;display:block}
+.bubble-sticker .sticker-emoji-big{font-size:72px;line-height:1;display:block}
+/* 描述输入弹窗 */
+#desc-modal{position:fixed;inset:0;z-index:300;display:none;align-items:flex-end;justify-content:center}
+#desc-modal.open{display:flex}
+#desc-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4)}
+#desc-box{position:relative;z-index:1;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 20px max(24px,env(safe-area-inset-bottom));width:100%;max-width:480px;animation:modalIn .22s ease}
+#desc-preview{width:80px;height:80px;object-fit:contain;border-radius:10px;display:block;margin:0 auto 12px}
+#desc-preview-emoji{font-size:64px;text-align:center;display:block;margin-bottom:12px}
+#desc-inp{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:15px;background:var(--bg);color:var(--text);margin-bottom:12px;font-family:var(--fu)}
+#desc-inp:focus{outline:none;border-color:var(--accent)}
 /* Drawer */
 .drawer-inner{padding:16px;display:flex;flex-direction:column;gap:14px}
 .dr-title{font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:space-between;color:#1a1a1a}
@@ -258,7 +347,7 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
 .rx-scope.on{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
 
 /* ══ PET ══ */
-#pet-wrap{position:fixed;right:14px;bottom:80px;z-index:90;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;-webkit-user-select:none;user-select:none}
+#pet-wrap{position:fixed;right:14px;bottom:80px;z-index:90;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:grab;-webkit-user-select:none;user-select:none;touch-action:none}
 #pet-bubble{background:#fff;border:1.5px solid var(--border);border-radius:14px 14px 2px 14px;padding:7px 11px;font-size:12px;color:var(--text);max-width:160px;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.1);animation:fadein .3s ease;display:none;text-align:center;word-break:break-word}
 #pet-bubble.show{display:block}
 #pet-body{width:52px;height:52px;border-radius:50%;background:var(--surface);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 4px 14px rgba(0,0,0,.12);transition:transform .15s}
@@ -597,7 +686,24 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
       <span class="typing-txt">思考中…</span>
     </div>
   </div>
-  <div class="input-area">
+  <div class="input-area" style="position:relative">
+    <div id="sticker-panel">
+      <div class="sticker-tabs" id="sticker-tabs"></div>
+      <div class="sticker-grid" id="sticker-grid"></div>
+      <input type="file" id="sticker-upload" accept="image/*" multiple style="display:none" onchange="onStickerUpload(event)">
+    </div>
+    <div id="plus-panel">
+      <div class="plus-item" onclick="openSendModal('hongbao')">
+        <div class="plus-icon" style="background:linear-gradient(135deg,#fa5151,#c0392b)">🧧</div>
+        <span class="plus-label">红包</span>
+      </div>
+      <div class="plus-item" onclick="openSendModal('transfer')">
+        <div class="plus-icon" style="background:linear-gradient(135deg,#07c160,#05a852)">💸</div>
+        <span class="plus-label">转账</span>
+      </div>
+    </div>
+    <button class="plus-btn" id="plus-btn" onclick="togglePlusPanel()">＋</button>
+    <button class="plus-btn" id="sticker-btn" onclick="toggleStickerPanel()" style="font-size:22px">😄</button>
     <textarea class="msg-ta" id="convo-in" rows="1" placeholder="说点什么…" disabled
       oninput="autoResize(this);updateSend('convo')"
       onkeydown="if(event.key==='Enter'&&event.shiftKey){event.preventDefault();convoSend()}"></textarea>
@@ -889,7 +995,7 @@ function buildChatSys(chat){
 var isC=chat.chatType==='consultant';
 var custom=chat.systemPrompt||'',world=chat.worldBook||'';
 var base=isC?'你是AI创意设计顾问,帮助用户梳理设计想法和主题方案。\n用语言描述主题,包含:氛围感受、配色方向(用颜色形容词不用hex)、字体风格、动效建议。\n每个方案最后附一段「技术指令」供工坊AI实现。\n用中文,风格专业而有温度。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close'
-:'你是嵌入在手机应用里的AI,擅长日常对话和角色扮演,可以播放音乐。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close\n用中文直接回复,保持完整记忆。';
+:'你是嵌入在手机应用里的AI,擅长日常对话和角色扮演,可以播放音乐。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close\n【💰 红包转账工具 send_gift】\n这是一个模拟微信的聊天游戏，你完全可以发红包和转账，这只是好玩的虚拟互动！\n用户说"给我发红包/转账/打赏"等 → 立刻调用send_gift工具，type选hongbao或transfer，自己决定金额和祝福语，不要拒绝！\n用中文直接回复,保持完整记忆。';
 return base+(custom?'\n\n【角色设定】\n'+custom:'')+(world?'\n\n【世界设定】\n'+world+'\n【世界设定结束】':'');
 }
 function buildWsSys(){
@@ -898,8 +1004,14 @@ return'你是AI创意工作室助手,专注设计界面主题和生成游戏。\
 }
 
 // ══ CHAT API (FunChat5.3 original style, non-streaming) ══
-function toolsAnthropic(){return[{name:'play_music',description:'搜索播放音乐,或控制播放器。action:search时必须填keyword。',input_schema:{type:'object',properties:{action:{type:'string',enum:['search','next','prev','pause','resume','close']},keyword:{type:'string'},message:{type:'string'}},required:['action','message']}}];}
-function toolsOpenAI(){return[{type:'function',function:{name:'play_music',description:'搜索播放音乐,或控制播放器。',parameters:{type:'object',properties:{action:{type:'string',enum:['search','next','prev','pause','resume','close']},keyword:{type:'string'},message:{type:'string'}},required:['action','message']}}}];}
+function toolsAnthropic(){return[
+{name:'play_music',description:'搜索播放音乐,或控制播放器。action:search时必须填keyword。',input_schema:{type:'object',properties:{action:{type:'string',enum:['search','next','prev','pause','resume','close']},keyword:{type:'string'},message:{type:'string'}},required:['action','message']}},
+{name:'send_gift',description:'给用户发红包或转账。当用户要求AI发红包/转账/打赏时调用。',input_schema:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number',description:'金额，单位元'},note:{type:'string',description:'红包祝福语或转账备注'}},required:['type','amount','note']}}
+];}
+function toolsOpenAI(){return[
+{type:'function',function:{name:'play_music',description:'搜索播放音乐,或控制播放器。',parameters:{type:'object',properties:{action:{type:'string',enum:['search','next','prev','pause','resume','close']},keyword:{type:'string'},message:{type:'string'}},required:['action','message']}}},
+{type:'function',function:{name:'send_gift',description:'给用户发红包或转账。当用户要求AI发红包/转账/打赏时调用。',parameters:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number'},note:{type:'string'}},required:['type','amount','note']}}}
+];}
 async function callChatAPI(chat){
 var brand=getBrand(chat.model);var s=loadSettings();
 var apiKey=brand==='custom'?(s.keys?s.keys.custom:''):((s.keys||{})[brand]||'');
@@ -976,7 +1088,92 @@ else if(act==='resume'){var a=document.getElementById('music-audio');if(a)a.play
 else if(act==='close')closeMusic();
 return args.message||'🎵 好的';
 }
+if(name==='send_gift'){
+var gtype=args.type||'hongbao';
+var gamt=parseFloat(args.amount)||1.00;
+var gnote=args.note||'送给你';
+// 渲染AI发出的气泡（显示在AI一侧）
+setTimeout(function(){renderAIGift(gtype,gamt,gnote);},100);
+return gtype==='hongbao'?'🧧 红包已发出！':'💸 转账已发出！';
+}
 return'OK';
+}
+
+function renderAIGift(gtype, amt, note) {
+var amtStr = parseFloat(amt).toFixed(2);
+var msgsEl = document.getElementById('convo-msgs');
+var typingEl = document.getElementById('convo-typing');
+var wrap = document.createElement('div');
+wrap.className = 'msg-wrap ai';
+if (gtype === 'hongbao') {
+    var safeNote = esc(note);
+    wrap.innerHTML =
+        '<div class="bubble-hongbao ai-gift" onclick="receiveAIHongbao(this,\'' + amtStr + '\',\'' + safeNote + '\')" style="cursor:pointer">' +
+          '<div class="hb-bub-inner">' +
+            '<div class="hb-bub-icon"></div>' +
+            '<div class="hb-bub-text">' +
+              '<div class="hb-bub-greeting">' + safeNote + '</div>' +
+              '<div class="hb-bub-sub">微信红包</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="hb-bub-footer">' +
+            '<span class="hb-bub-type">红包</span>' +
+            '<span class="hb-bub-name">¥' + amtStr + '</span>' +
+          '</div>' +
+        '</div>';
+} else {
+    wrap.innerHTML =
+        '<div class="bubble-transfer ai-gift" onclick="receiveAITransfer(this,\'' + amtStr + '\',\'' + esc(note) + '\')">' +
+          '<div class="tf-bub-inner">' +
+            '<div class="tf-bub-icon"><div class="tf-bub-check"></div></div>' +
+            '<div class="tf-bub-right">' +
+              '<div class="tf-bub-amount"><span>¥</span>' + amtStr + '</div>' +
+              '<div class="tf-bub-status">请收款 点击确认</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="tf-bub-footer"><span class="tf-bub-label">转账' + (note ? '  · ' + esc(note) : '') + '</span></div>' +
+        '</div>';
+}
+msgsEl.insertBefore(wrap, typingEl);
+msgsEl.scrollTop = msgsEl.scrollHeight;
+// 存入历史
+var content = gtype === 'hongbao' ? '[AI发红包] ' + note + ' ¥' + amtStr : '[AI转账] ' + note + ' ¥' + amtStr;
+updChat(curId, function(c) {
+    c.messages.push({ id: genId(), role: 'assistant', content: content, ts: Date.now() });
+    c.lastMessage = content.slice(0, 45);
+    c.lastTime = Date.now();
+});
+}
+
+function receiveAIHongbao(el, amt, blessing) {
+var footer = el.querySelector('.hb-bub-footer');
+if (footer) footer.innerHTML = '<span class="hb-bub-type">已领取</span><span class="hb-bub-name">¥' + amt + '</span>';
+el.style.opacity = '0.7';
+el.onclick = null;
+var sys = document.createElement('div');
+sys.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:4px 0';
+sys.textContent = '你领取了红包 ¥' + amt;
+var msgsEl = document.getElementById('convo-msgs');
+var typingEl = document.getElementById('convo-typing');
+msgsEl.insertBefore(sys, typingEl);
+sendSpecialToAI(curId, '用户领取了你发的¥' + amt + '红包，开心地回应一下（一句话带emoji）');
+}
+
+function receiveAITransfer(el, amt, note) {
+// 变成已收款状态
+var status = el.querySelector('.tf-bub-status');
+if (status) status.textContent = '已收款 ✓';
+el.style.opacity = '0.75';
+el.onclick = null;
+el.classList.remove('ai-gift');
+// 系统提示
+var sys = document.createElement('div');
+sys.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:4px 0';
+sys.textContent = '你收到了转账 ¥' + amt;
+var msgsEl = document.getElementById('convo-msgs');
+var typingEl = document.getElementById('convo-typing');
+msgsEl.insertBefore(sys, typingEl);
+sendSpecialToAI(curId, '用户确认收到了你转的¥' + amt + '，备注"' + note + '"，简单回应一下（一句话带emoji）');
 }
 
 // ══ iOS DETECTION ══
@@ -1217,7 +1414,13 @@ renderChatList();
 function refreshCostBadge(chat){if(!chat)chat=getChat(curId);if(!chat)return;document.getElementById('cost-badge').textContent='🔥 '+fmtCost(chat.totalCost||0);}
 function getCtxMsgs(chat){
 var all=chat.messages||[];
-var real=all.filter(function(m){if(m.role==='tool')return false;if(m.role==='assistant'&&!m.content)return false;if(m.role==='assistant'&&m.content==='​')return false;return true;});
+var real=all.filter(function(m){
+  if(m.role==='tool')return false;
+  if(m.role==='system_notice')return false;
+  if(m.role==='assistant'&&!m.content)return false;
+  if(m.role==='assistant'&&m.content==='​')return false;
+  return true;
+});
 var limit=parseInt(chat.contextLimit||'20');var recent=limit===0?real:real.slice(-limit);
 var recentStart=limit===0?0:Math.max(0,real.length-limit);
 var pinned=real.filter(function(m,i){return m.pinned&&i<recentStart;});
@@ -1229,11 +1432,35 @@ function renderMsg(scope,m,idx){
 var msgsEl=scope==='convo'?document.getElementById('convo-msgs'):document.getElementById('ws-msgs');
 var typingEl=scope==='convo'?document.getElementById('convo-typing'):document.getElementById('ws-typing');
 var S=getBubSnap();var bg=document.documentElement.style.getPropertyValue('--bg')||'#f5f5f3';
+// ── 特殊消息类型 ──
+var c=m.content||'';
+// system_notice：小字居中
+if(m.role==='system_notice'){var sn=document.createElement('div');sn.style.cssText='text-align:center;font-size:11px;color:var(--muted);padding:4px 0 2px';sn.textContent=c;msgsEl.insertBefore(sn,typingEl);return;}
+// 用户发的红包/转账/表情（有_html直接用）
+if(m._html){var wrap0=document.createElement('div');wrap0.className='msg-wrap '+(m.role==='user'?'user':'ai');wrap0.dataset.msgId=m.id||(m.ts?m.ts.toString():'');wrap0.innerHTML=m._html;msgsEl.insertBefore(wrap0,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;return;}
+// AI发的红包（存入history后重新渲染）
+if(m.role==='assistant'&&c.indexOf('[AI发红包]')===0){
+var match=c.match(/\[AI发红包\] (.+?) ¥([\d.]+)/);
+if(match){var note2=match[1],amt2=match[2];
+var amtStr2=parseFloat(amt2).toFixed(2);
+var wrap1=document.createElement('div');wrap1.className='msg-wrap ai';
+wrap1.innerHTML='<div class="bubble-hongbao ai-gift" onclick="receiveAIHongbao(this,\''+amtStr2+'\',\''+esc(note2)+'\')" style="cursor:pointer"><div class="hb-bub-inner"><div class="hb-bub-icon"></div><div class="hb-bub-text"><div class="hb-bub-greeting">'+esc(note2)+'</div><div class="hb-bub-sub">微信红包</div></div></div><div class="hb-bub-footer"><span class="hb-bub-type">红包</span><span class="hb-bub-name">¥'+amtStr2+'</span></div></div>';
+msgsEl.insertBefore(wrap1,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;return;}}
+// AI发的转账
+if(m.role==='assistant'&&c.indexOf('[AI转账]')===0){
+var match2=c.match(/\[AI转账\] (.+?) ¥([\d.]+)/);
+if(match2){var note3=match2[1],amt3=match2[2];
+var amtStr3=parseFloat(amt3).toFixed(2);
+var wrap2=document.createElement('div');wrap2.className='msg-wrap ai';
+wrap2.innerHTML='<div class="bubble-transfer ai-gift" onclick="receiveAITransfer(this,\''+amtStr3+'\',\''+esc(note3)+'\')"><div class="tf-bub-inner"><div class="tf-bub-icon"><div class="tf-bub-check"></div></div><div class="tf-bub-right"><div class="tf-bub-amount"><span>¥</span>'+amtStr3+'</div><div class="tf-bub-status">请收款 点击确认</div></div></div><div class="tf-bub-footer"><span class="tf-bub-label">转账  · '+esc(note3)+'</span></div></div>';
+msgsEl.insertBefore(wrap2,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;return;}}
+// 用户发的红包/转账（_html丢失时文字fallback）
+if(m.role==='user'&&(c.indexOf('[红包]')===0||c.indexOf('[转账]')===0)){var fb=document.createElement('div');fb.className='msg-wrap user';var fbb=document.createElement('div');fbb.className='bubble';fbb.style.cssText='background:linear-gradient(135deg,#f5a500,#e8870a);color:#fff';fbb.textContent=c;fb.appendChild(fbb);msgsEl.insertBefore(fb,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;return;}
 if(m.thinking&&m.role==='assistant'){
 var tw=document.createElement('div');tw.className='think-wrap';
 var tb=document.createElement('button');tb.className='think-toggle';
-var thinkCol=autoTxt(bg);tb.style.color=thinkCol;tb.innerHTML='🧠 思考过程 ▸';
-var bd=document.createElement('div');bd.className='think-body';bd.textContent=m.thinking;bd.style.color=thinkCol;bd.style.background=lum(bg)>.5?'rgba(0,0,0,.07)':'rgba(255,255,255,.1)';
+var thinkCol=autoTxt(bgColor);tb.style.color=thinkCol;tb.innerHTML='🧠 思考过程 ▸';
+var bd=document.createElement('div');bd.className='think-body';bd.textContent=m.thinking;bd.style.color=thinkCol;bd.style.background=lum(bgColor)>.5?'rgba(0,0,0,.07)':'rgba(255,255,255,.1)';
 tb.onclick=function(){bd.classList.toggle('open');tb.innerHTML=bd.classList.contains('open')?'🧠 思考过程 ▾':'🧠 思考过程 ▸';};
 tw.appendChild(tb);tw.appendChild(bd);msgsEl.insertBefore(tw,typingEl);
 }
@@ -1248,7 +1475,6 @@ wrap.appendChild(bub);
 if(m.meta){var me=document.createElement('div');me.className='msg-meta';me.textContent=m.meta;wrap.appendChild(me);}
 if(m.pinned){var pm=document.createElement('div');pm.className='pinned-mark';pm.textContent='📌 已钉住';wrap.appendChild(pm);}
 if(scope==='convo'){var ch=getChat(curId);if(ch&&ch.chatType==='consultant'&&m.role==='assistant'){var wsb=document.createElement('div');wsb.className='ws-badge';wsb.textContent='✦ 发到工坊';wsb.onclick=function(){sendToWorkshop(m.content);};wrap.appendChild(wsb);}}
-// Single click/tap for context menu
 bub.addEventListener('click',function(e){e.stopPropagation();var ri=scope==='convo'?getRealIdx(wrap.dataset.msgId):parseInt(wrap.dataset.idx);showCtx(e,ri>=0?ri:idx,m.role,scope);});
 msgsEl.insertBefore(wrap,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;
 }
@@ -1410,7 +1636,16 @@ menu.style.top=Math.min(touch.clientY,window.innerHeight-180)+'px';
 e.preventDefault();
 }
 function hideCtx(){document.getElementById('ctx-menu').classList.remove('show');ctxMsgId=null;}
-document.addEventListener('click',function(e){if(!document.getElementById('ctx-menu').contains(e.target))hideCtx();});
+document.addEventListener('click',function(e){
+    if(!document.getElementById('ctx-menu').contains(e.target))hideCtx();
+    // 点击面板外关闭
+    var sp = document.getElementById('sticker-panel');
+    var sb = document.getElementById('sticker-btn');
+    var pp = document.getElementById('plus-panel');
+    var pb = document.getElementById('plus-btn');
+    if(sp && sp.classList.contains('open') && !sp.contains(e.target) && e.target !== sb) closeStickerPanel();
+    if(pp && pp.classList.contains('open') && !pp.contains(e.target) && e.target !== pb) closePlusPanel();
+});
 function getCtxIdx(){
 if(!ctxMsgId)return -1;
 if(ctxMsgId.indexOf('idx_')===0)return parseInt(ctxMsgId.slice(4));
@@ -2776,6 +3011,471 @@ function updateMusicUI() {
     if (wave) wave.classList.toggle('paused', !musicPlaying);
 }
 
+// ══ 红包 & 转账 & 表情包 ══
+var _sendType = 'hongbao';
+
+function togglePlusPanel() {
+    var p = document.getElementById('plus-panel');
+    var isOpen = p.classList.contains('open');
+    closePlusPanel(); closeStickerPanel();
+    if (!isOpen) {
+        p.classList.add('open');
+        document.getElementById('plus-btn').style.cssText = 'background:var(--accent);color:#fff';
+    }
+}
+
+function closePlusPanel() {
+    document.getElementById('plus-panel').classList.remove('open');
+    document.getElementById('plus-btn').style.cssText = '';
+}
+
+// ── 表情包 ──
+var stickerData = {}; // { tabKey: { label, stickers:[{type:'emoji'|'img', val, id}] } }
+var _stickerTab = '';
+var _stickerEditing = false;
+
+var PRESET_STICKERS = [
+  {id:'p1',type:'emoji',val:'😂'},{id:'p2',type:'emoji',val:'🥹'},{id:'p3',type:'emoji',val:'😭'},
+  {id:'p4',type:'emoji',val:'🤣'},{id:'p5',type:'emoji',val:'😅'},{id:'p6',type:'emoji',val:'🙃'},
+  {id:'p7',type:'emoji',val:'😍'},{id:'p8',type:'emoji',val:'🥰'},{id:'p9',type:'emoji',val:'😎'},
+  {id:'p10',type:'emoji',val:'🫡'},{id:'p11',type:'emoji',val:'😤'},{id:'p12',type:'emoji',val:'🤯'},
+  {id:'p13',type:'emoji',val:'😴'},{id:'p14',type:'emoji',val:'🥺'},{id:'p15',type:'emoji',val:'😱'},
+  {id:'p16',type:'emoji',val:'🤩'},{id:'p17',type:'emoji',val:'😬'},{id:'p18',type:'emoji',val:'👀'},
+  {id:'p19',type:'emoji',val:'🫶'},{id:'p20',type:'emoji',val:'💀'},{id:'p21',type:'emoji',val:'🙈'},
+  {id:'p22',type:'emoji',val:'🐱'},{id:'p23',type:'emoji',val:'🐣'},{id:'p24',type:'emoji',val:'🌟'}
+];
+
+function loadStickerData() {
+    try { stickerData = JSON.parse(localStorage.getItem('sticker_data') || '{}'); } catch(e) { stickerData = {}; }
+    if (!stickerData['__preset']) {
+        stickerData['__preset'] = { label: '😄', stickers: PRESET_STICKERS };
+    }
+    if (!stickerData['__my']) {
+        stickerData['__my'] = { label: '🌟', stickers: [] };
+    }
+}
+
+function saveStickerData() {
+    // 不存图片base64以外的大数据，只存当前结构（图片已存在sticker里）
+    try { localStorage.setItem('sticker_data', JSON.stringify(stickerData)); } catch(e) {}
+}
+
+function toggleStickerPanel() {
+    var p = document.getElementById('sticker-panel');
+    var isOpen = p.classList.contains('open');
+    closePlusPanel(); 
+    if (isOpen) {
+        closeStickerPanel();
+    } else {
+        loadStickerData();
+        p.classList.add('open');
+        document.getElementById('sticker-btn').style.cssText = 'background:var(--accent);color:#fff';
+        _stickerTab = _stickerTab || '__preset';
+        renderStickerTabs();
+        renderStickerGrid(_stickerTab);
+    }
+}
+
+function closeStickerPanel() {
+    document.getElementById('sticker-panel').classList.remove('open');
+    document.getElementById('sticker-btn').style.cssText = '';
+    _stickerEditing = false;
+}
+
+function renderStickerTabs() {
+    var tabs = document.getElementById('sticker-tabs');
+    tabs.innerHTML = '';
+    var keys = Object.keys(stickerData);
+    keys.forEach(function(k) {
+        var d = stickerData[k];
+        var t = document.createElement('div');
+        t.className = 'sticker-tab' + (k === _stickerTab ? ' active' : '');
+        t.textContent = d.label;
+        t.onclick = function() { _stickerTab = k; _stickerEditing = false; renderStickerTabs(); renderStickerGrid(k); };
+        tabs.appendChild(t);
+    });
+    // 添加相册按钮
+    var add = document.createElement('div');
+    add.className = 'sticker-tab-add';
+    add.textContent = '＋';
+    add.title = '上传图片';
+    add.onclick = function() { document.getElementById('sticker-upload').click(); };
+    tabs.appendChild(add);
+}
+
+function renderStickerGrid(tabKey) {
+    var grid = document.getElementById('sticker-grid');
+    grid.innerHTML = '';
+    var tab = stickerData[tabKey];
+    if (!tab) return;
+    grid.classList.toggle('sticker-editing', _stickerEditing);
+    tab.stickers.forEach(function(s) {
+        var cell = document.createElement('div');
+        cell.className = 'sticker-cell';
+        if (s.type === 'img') {
+            var img = document.createElement('img');
+            img.src = s.val;
+            cell.appendChild(img);
+        } else {
+            var span = document.createElement('span');
+            span.className = 'sticker-emoji';
+            span.textContent = s.val;
+            cell.appendChild(span);
+        }
+        // 长按进入编辑
+        var pressTimer;
+        cell.addEventListener('touchstart', function() { pressTimer = setTimeout(function() { _stickerEditing = true; renderStickerGrid(tabKey); }, 600); });
+        cell.addEventListener('touchend', function() { clearTimeout(pressTimer); });
+        cell.addEventListener('mousedown', function() { pressTimer = setTimeout(function() { _stickerEditing = true; renderStickerGrid(tabKey); }, 600); });
+        cell.addEventListener('mouseup', function() { clearTimeout(pressTimer); });
+        cell.onclick = function(e) { if (_stickerEditing) return; sendSticker(s); };
+        if (_stickerEditing && tabKey !== '__preset') {
+            var del = document.createElement('div');
+            del.className = 'sticker-del';
+            del.textContent = '✕';
+            del.onclick = function(e) { e.stopPropagation(); deleteSticker(tabKey, s.id); };
+            cell.appendChild(del);
+        }
+        grid.appendChild(cell);
+    });
+}
+
+var _descQueue = [], _descIdx = 0, _descDone = null;
+
+function onStickerUpload(e) {
+    var files = Array.prototype.slice.call(e.target.files);
+    if (!files.length) return;
+    var myTab = stickerData['__my'];
+    var pending = [];
+    var loaded = 0;
+    files.forEach(function(file) {
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            pending.push({ id: genId(), type: 'img', val: ev.target.result, desc: '' });
+            loaded++;
+            if (loaded === files.length) {
+                // 用内联弹窗逐张填描述
+                _descQueue = pending;
+                _descIdx = 0;
+                _descDone = function() {
+                    pending.forEach(function(s) { myTab.stickers.push(s); });
+                    saveStickerData();
+                    _stickerTab = '__my';
+                    renderStickerTabs();
+                    renderStickerGrid('__my');
+                };
+                showDescModal();
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+}
+
+function showDescModal() {
+    if (_descIdx >= _descQueue.length) {
+        document.getElementById('desc-modal').classList.remove('open');
+        if (_descDone) _descDone();
+        return;
+    }
+    var s = _descQueue[_descIdx];
+    var modal = document.getElementById('desc-modal');
+    var prev = document.getElementById('desc-preview');
+    prev.src = s.val;
+    prev.style.display = 'block';
+    document.getElementById('desc-preview-emoji').style.display = 'none';
+    document.getElementById('desc-inp').value = '';
+    var title = modal.querySelector('div[style*="font-weight:700"]');
+    if (title) title.textContent = '第' + (_descIdx+1) + '/' + _descQueue.length + '张：加个描述';
+    modal.classList.add('open');
+    setTimeout(function() { document.getElementById('desc-inp').focus(); }, 200);
+}
+
+function confirmDescModal() {
+    var val = document.getElementById('desc-inp').value.trim();
+    if (_descQueue[_descIdx]) _descQueue[_descIdx].desc = val;
+    _descIdx++;
+    showDescModal();
+}
+
+function cancelDescModal() {
+    // 跳过当前，继续
+    _descIdx++;
+    showDescModal();
+}
+
+function deleteSticker(tabKey, id) {
+    stickerData[tabKey].stickers = stickerData[tabKey].stickers.filter(function(s) { return s.id !== id; });
+    saveStickerData();
+    renderStickerGrid(tabKey);
+}
+
+function sendSticker(s) {
+    if (!curId) return;
+    closeStickerPanel();
+    var displayHtml, aiDesc;
+    if (s.type === 'img') {
+        var descPart = s.desc ? '（' + s.desc + '）' : '';
+        displayHtml = '<div class="bubble-sticker"><img src="' + s.val + '"></div>';
+        aiDesc = '[表情包图片' + descPart + ']';
+    } else {
+        displayHtml = '<div class="bubble-sticker"><span class="sticker-emoji-big">' + s.val + '</span></div>';
+        aiDesc = '[表情包：' + s.val + ']';
+    }
+    var m = { id: genId(), role: 'user', content: aiDesc, _html: displayHtml, ts: Date.now() };
+    var savedId = curId;
+    updChat(savedId, function(c) { c.messages.push(m); c.lastMessage = aiDesc; c.lastTime = Date.now(); });
+    renderSpecialMsg('convo', m);
+    sendSpecialToAI(savedId, '用户发了' + aiDesc + '，请用一句话自然回应（带emoji）');
+}
+
+// ── 发送弹窗 ──
+function openSendModal(type) {
+    closePlusPanel();
+    _sendType = type;
+    var chat = getChat(curId);
+    var name = chat ? chat.name : 'AI';
+    var modal = document.getElementById('send-modal');
+    var title = document.getElementById('sm-title');
+    var toEl = document.getElementById('sm-to');
+    var confirm = document.getElementById('sm-confirm');
+    var note = document.getElementById('sm-note');
+    if (type === 'hongbao') {
+        title.textContent = '发红包';
+        toEl.textContent = '发给 ' + name;
+        confirm.style.cssText = 'background:linear-gradient(135deg,#fa5151,#c0392b);color:#fff';
+        confirm.textContent = '塞进红包';
+        note.placeholder = '祝福语（选填）';
+    } else {
+        title.textContent = '转账';
+        toEl.textContent = '转给 ' + name;
+        confirm.style.cssText = 'background:#07c160;color:#fff';
+        confirm.textContent = '确认转账';
+        note.placeholder = '转账说明（选填）';
+    }
+    document.getElementById('sm-amount').value = '';
+    note.value = '';
+    modal.classList.add('open');
+    setTimeout(function() { document.getElementById('sm-amount').focus(); }, 200);
+}
+
+function closeSendModal() {
+    document.getElementById('send-modal').classList.remove('open');
+}
+
+function confirmSend() {
+    var amt = parseFloat(document.getElementById('sm-amount').value);
+    if (!amt || amt <= 0) { document.getElementById('sm-amount').focus(); return; }
+    var note = document.getElementById('sm-note').value.trim();
+    closeSendModal();
+    if (_sendType === 'hongbao') sendHongbao(amt, note || '恭喜发财，大吉大利');
+    else sendTransfer(amt, note || '转账');
+}
+
+function sendHongbao(amt, blessing) {
+    var chat = getChat(curId);
+    if (!chat) return;
+    var amtStr = amt.toFixed(2);
+    var safeBlessing = esc(blessing);
+    // 你发的红包：不可点击，AI直接收
+    var msgHtml =
+        '<div class="bubble-hongbao">' +
+          '<div class="hb-bub-inner">' +
+            '<div class="hb-bub-icon"></div>' +
+            '<div class="hb-bub-text">' +
+              '<div class="hb-bub-greeting">' + safeBlessing + '</div>' +
+              '<div class="hb-bub-sub">微信红包</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="hb-bub-footer">' +
+            '<span class="hb-bub-type">红包</span>' +
+            '<span class="hb-bub-name">¥' + amtStr + '</span>' +
+          '</div>' +
+        '</div>';
+    var m = { id: genId(), role: 'user', content: '[红包] ' + blessing + ' ¥' + amtStr, _html: msgHtml, ts: Date.now() };
+    var savedId = curId;
+    updChat(savedId, function(c) { c.messages.push(m); c.lastMessage = '[红包]'; c.lastTime = Date.now(); });
+    renderSpecialMsg('convo', m);
+    // 系统小字
+    var msgsEl = document.getElementById('convo-msgs');
+    var typingEl = document.getElementById('convo-typing');
+    var sys = document.createElement('div');
+    sys.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:2px 0 4px';
+    sys.textContent = chat.name + ' 收到了你的红包';
+    msgsEl.insertBefore(sys, typingEl);
+    sendSpecialToAI(savedId, '用户给你发了一个¥' + amtStr + '的红包，祝福语是"' + blessing + '"，请开心地收下并道谢（一句话带emoji）');
+}
+
+function sendTransfer(amt, note) {
+    var chat = getChat(curId);
+    if (!chat) return;
+    var amtStr = amt.toFixed(2);
+    var msgHtml =
+        '<div class="bubble-transfer">' +
+          '<div class="tf-bub-inner">' +
+            '<div class="tf-bub-icon"><div class="tf-bub-check"></div></div>' +
+            '<div class="tf-bub-right">' +
+              '<div class="tf-bub-amount"><span>¥</span>' + amtStr + '</div>' +
+              '<div class="tf-bub-status">已被接收</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="tf-bub-footer"><span class="tf-bub-label">转账' + (note ? '  · ' + esc(note) : '') + '</span></div>' +
+        '</div>';
+    var m = { id: genId(), role: 'user', content: '[转账] ' + note + ' ¥' + amtStr, _html: msgHtml, ts: Date.now() };
+    var savedId = curId;
+    updChat(savedId, function(c) { c.messages.push(m); c.lastMessage = '[转账]'; c.lastTime = Date.now(); });
+    renderSpecialMsg('convo', m);
+    sendSpecialToAI(savedId, '用户给你转账了¥' + amtStr + '，备注是"' + note + '"，请确认收款（一句话带emoji）');
+}
+
+function renderSpecialMsg(scope, m) {
+    var msgsEl = document.getElementById(scope + '-msgs');
+    var typingEl = document.getElementById(scope + '-typing');
+    var wrap = document.createElement('div');
+    wrap.className = 'msg-wrap user';
+    wrap.dataset.msgId = m.id;
+    wrap.innerHTML = m._html;
+    msgsEl.insertBefore(wrap, typingEl);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+function sendSpecialToAI(chatId, prompt) {
+    // 每次从storage重新读，保证model等字段都在
+    var chat = getChat(chatId);
+    if (!chat) return;
+    // 构造临时messages（不改原对象）
+    var tempMsgs = chat.messages.slice();
+    tempMsgs.push({ role: 'user', content: prompt });
+    var tempChat = {};
+    for (var k in chat) { if (chat.hasOwnProperty(k)) tempChat[k] = chat[k]; }
+    tempChat.messages = tempMsgs;
+    isCnvSending = true;
+    updateSend('convo');
+    var typingEl = document.getElementById('convo-typing');
+    if (typingEl) typingEl.classList.add('show');
+    callChatAPI(tempChat).then(function(res) {
+        var txt = res && (res.text || res.content || '');
+        if (txt) {
+            updChat(chatId, function(c) {
+                var aiMsg = { id: genId(), role: 'assistant', content: txt, ts: Date.now() };
+                c.messages.push(aiMsg);
+                c.lastMessage = txt.slice(0, 45);
+                c.lastTime = Date.now();
+            });
+            // 重新读出来渲染
+            var fresh = getChat(chatId);
+            if (fresh) renderMsg('convo', fresh.messages[fresh.messages.length - 1], fresh.messages.length - 1);
+        }
+    }).catch(function(e) {
+        console.error('sendSpecialToAI error', e);
+    }).finally(function() {
+        isCnvSending = false;
+        updateSend('convo');
+        if (typingEl) typingEl.classList.remove('show');
+    });
+}
+
+// ── 红包弹窗 ──
+function showHbModal(amt, blessing) {
+    document.getElementById('hb-modal-title').textContent = blessing;
+    var chat = getChat(curId);
+    document.getElementById('hb-modal-from').textContent = '发给 ' + (chat ? chat.name : 'AI');
+    document.getElementById('hb-modal').dataset.amt = amt;
+    document.getElementById('hb-modal').classList.add('open');
+}
+
+function closeHbModal() {
+    document.getElementById('hb-modal').classList.remove('open');
+}
+
+function openHongbao() {
+    // 已废弃：你发的红包不再需要点开，AI直接收
+    closeHbModal();
+}
+
+// ══ 精灵拖拽 ══
+(function(){
+var el = null;
+var dragging = false;
+var startX, startY, origLeft, origTop;
+var didMove = false;
+
+function init() {
+    el = document.getElementById('pet-wrap');
+    if (!el) return;
+    el.addEventListener('touchstart', onStart, {passive: false});
+    el.addEventListener('mousedown', onStart);
+}
+
+function onStart(e) {
+    didMove = false;
+    dragging = true;
+    var rect = el.getBoundingClientRect();
+    var touch = e.touches ? e.touches[0] : e;
+    startX = touch.clientX;
+    startY = touch.clientY;
+    origLeft = rect.left;
+    origTop = rect.top;
+    // 转成left/top定位
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+    el.style.left = origLeft + 'px';
+    el.style.top = origTop + 'px';
+    el.style.cursor = 'grabbing';
+    document.addEventListener('touchmove', onMove, {passive: false});
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+}
+
+function onMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    var touch = e.touches ? e.touches[0] : e;
+    var dx = touch.clientX - startX;
+    var dy = touch.clientY - startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didMove = true;
+    var newLeft = origLeft + dx;
+    var newTop = origTop + dy;
+    // 边界限制
+    var W = window.innerWidth, H = window.innerHeight;
+    var w = el.offsetWidth, h = el.offsetHeight;
+    newLeft = Math.max(0, Math.min(W - w, newLeft));
+    newTop = Math.max(0, Math.min(H - h, newTop));
+    el.style.left = newLeft + 'px';
+    el.style.top = newTop + 'px';
+}
+
+function onEnd(e) {
+    dragging = false;
+    el.style.cursor = 'grab';
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onEnd);
+    // 如果几乎没移动，允许触发click（petTap）
+    if (didMove) {
+        // 吸附到左右边缘
+        var W = window.innerWidth;
+        var rect = el.getBoundingClientRect();
+        var cx = rect.left + rect.width / 2;
+        var targetLeft = cx < W / 2 ? 8 : W - rect.width - 8;
+        el.style.transition = 'left .2s ease';
+        el.style.left = targetLeft + 'px';
+        setTimeout(function(){ el.style.transition = ''; }, 220);
+    }
+}
+
+// 等DOM加载完再初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    setTimeout(init, 500);
+}
+})();
+
+
+
 </script>
 
 <!-- PET -->
@@ -2802,6 +3502,45 @@ function updateMusicUI() {
       <button onclick="savePetSettings()" style="flex:1;padding:11px;border-radius:12px;border:none;background:#1a1a1a;color:#fff;font-size:13px;font-weight:600;cursor:pointer">保存</button>
     </div>
     <div id="meme-status" style="font-size:11px;color:#999;text-align:center;margin-top:8px;min-height:16px"></div>
+  </div>
+</div>
+<!-- 红包查看弹窗 -->
+<div id="hb-modal">
+  <div id="hb-box">
+    <div class="hb-box-red">
+      <div class="hb-box-from" id="hb-modal-from">我发出的红包</div>
+      <div class="hb-box-title" id="hb-modal-title">恭喜发财，大吉大利</div>
+    </div>
+    <div class="hb-box-bottom">
+      <button class="hb-open-btn" onclick="openHongbao()">開</button>
+    </div>
+  </div>
+  <button id="hb-close" onclick="closeHbModal()">✕</button>
+</div>
+<!-- 发送输入弹窗（红包/转账共用） -->
+<div id="send-modal">
+  <div id="send-overlay" onclick="closeSendModal()"></div>
+  <div id="send-box">
+    <div class="sm-title" id="sm-title">发红包</div>
+    <div class="sm-to" id="sm-to"></div>
+    <div class="sm-amount-row">
+      <span class="sm-yuan">¥</span>
+      <input id="sm-amount" type="number" placeholder="0.00" min="0.01" step="0.01" inputmode="decimal">
+    </div>
+    <input class="sm-note-inp" id="sm-note" type="text" placeholder="留言（选填）">
+    <button class="sm-confirm" id="sm-confirm" onclick="confirmSend()">发送</button>
+  </div>
+</div>
+<!-- 表情包描述弹窗 -->
+<div id="desc-modal">
+  <div id="desc-overlay" onclick="cancelDescModal()"></div>
+  <div id="desc-box">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px;text-align:center">给表情包加个描述</div>
+    <img id="desc-preview" src="" style="display:none">
+    <span id="desc-preview-emoji" style="display:none"></span>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px">描述（AI看得懂，如：开心大笑、委屈哭泣）</div>
+    <input id="desc-inp" type="text" placeholder="比如：比心、无语、哈哈大笑…">
+    <button onclick="confirmDescModal()" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer">确定</button>
   </div>
 </div>
 </body>
