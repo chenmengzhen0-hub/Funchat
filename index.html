@@ -1064,7 +1064,7 @@ return{fc:fc,bai:p.bubble_ai||g('--bai')||'#fff',bu:p.bubble_user||p.accent||g('
 
 // ══ DATA ══
 function loadChats(){try{return JSON.parse(localStorage.getItem('aichats_v5')||'[]');}catch(e){return[];}}
-function saveChats(c){localStorage.setItem('aichats_v5',JSON.stringify(c));}
+function saveChats(c){try{localStorage.setItem('aichats_v5',JSON.stringify(c));}catch(e){if(e.name==='QuotaExceededError'||e.code===22){alert('⚠️ 存储空间不足！头像太大或聊天记录太多。建议：清空部分对话记录，或去设置里清理。');}else{throw e;}}}
 function loadSettings(){try{var d=JSON.parse(localStorage.getItem('aisettings_v5')||'null');if(!d)d=JSON.parse(localStorage.getItem('aisettings_v4')||'null');if(!d)d={};if(!d.keys)d.keys={};if(!d.keys.jamendo)d.keys.jamendo='';if(!d.musicProxy)d.musicProxy='';return d;}catch(e){return{keys:{},musicProxy:''};}}
 function saveSettingsData(s){localStorage.setItem('aisettings_v5',JSON.stringify(s));}
 function getChat(id){var cs=loadChats();for(var i=0;i<cs.length;i++){if(cs[i].id===id)return cs[i];}return null;}
@@ -1878,12 +1878,14 @@ function drawCrop(){
 }
 
 function confirmCrop(){
-  var out=document.createElement('canvas');out.width=240;out.height=240;
+  // 输出压缩版头像：120x120 JPEG quality 0.6，节省localStorage空间
+  var out=document.createElement('canvas');out.width=120;out.height=120;
   var ctx=out.getContext('2d');
-  var r=20;
-  ctx.beginPath();ctx.moveTo(r,0);ctx.lineTo(240-r,0);ctx.quadraticCurveTo(240,0,240,r);ctx.lineTo(240,240-r);ctx.quadraticCurveTo(240,240,240-r,240);ctx.lineTo(r,240);ctx.quadraticCurveTo(0,240,0,240-r);ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);ctx.closePath();ctx.clip();
-  ctx.drawImage(_cropImg,_cropX,_cropY,_cropImg.width*_cropScale,_cropImg.height*_cropScale);
-  var data=out.toDataURL('image/png');
+  var r=12;
+  ctx.beginPath();ctx.moveTo(r,0);ctx.lineTo(120-r,0);ctx.quadraticCurveTo(120,0,120,r);ctx.lineTo(120,120-r);ctx.quadraticCurveTo(120,120,120-r,120);ctx.lineTo(r,120);ctx.quadraticCurveTo(0,120,0,120-r);ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);ctx.closePath();ctx.clip();
+  // 把裁剪坐标从240缩放到120
+  ctx.drawImage(_cropImg,_cropX/2,_cropY/2,_cropImg.width*_cropScale/2,_cropImg.height*_cropScale/2);
+  var data=out.toDataURL('image/jpeg',0.6);
   closeCropModal();
   if(_cropTarget==='ai'){
     updChat(curId,function(c){c.avatarImg=data;});
