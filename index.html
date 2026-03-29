@@ -897,6 +897,16 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
       <div id="usage-list"></div>
       <button onclick="resetUsage()" style="margin-top:8px;padding:8px;border-radius:8px;border:none;background:#ff3b3015;color:#ff3b30;font-size:12px;font-weight:600;cursor:pointer;width:100%">🗑 重置统计</button>
     </div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f0f0f0">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">☁️ 云备份（GitHub Gist）</div>
+      <label class="mflbl">GitHub Token</label><input class="mfinp" id="sk-gh-token" type="password" placeholder="ghp_...">
+      <label class="mflbl">Gist ID</label><input class="mfinp" id="sk-gist-id" placeholder="32位字母数字串">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button onclick="gistBackup()" style="flex:1;padding:10px;border-radius:10px;border:none;background:#0969da15;color:#0969da;font-size:13px;font-weight:600;cursor:pointer">☁️ 备份到云端</button>
+        <button onclick="gistRestore()" style="flex:1;padding:10px;border-radius:10px;border:none;background:#1a7f3715;color:#1a7f37;font-size:13px;font-weight:600;cursor:pointer">📥 从云端恢复</button>
+      </div>
+      <div id="gist-status" style="font-size:12px;color:#999;margin-top:6px;text-align:center"></div>
+    </div>
     <button class="mbtn" onclick="saveSettings()">保存</button>
   </div>
 </div>
@@ -2408,6 +2418,8 @@ document.getElementById('sk-cu').value=s.customUrl||'';
 document.getElementById('sk-ck').value=(s.keys&&s.keys.custom)||'';
 document.getElementById('sk-cf').value=s.customFmt||'openai';
 document.getElementById('sk-cn').value=s.customName||'';
+document.getElementById('sk-gh-token').value=s.ghToken||'';
+document.getElementById('sk-gist-id').value=s.gistId||'';
 renderUsageUI();openModal('mod-settings');
 }
 function saveSettings(){
@@ -2419,6 +2431,8 @@ s.customUrl=document.getElementById('sk-cu').value.trim();
 s.keys.custom=document.getElementById('sk-ck').value.trim();
 s.customFmt=document.getElementById('sk-cf').value;
 s.customName=document.getElementById('sk-cn').value.trim();
+s.ghToken=document.getElementById('sk-gh-token').value.trim();
+s.gistId=document.getElementById('sk-gist-id').value.trim();
 saveSettingsData(s);closeModal('mod-settings');
 }
 function renderUsageUI(){
@@ -2426,6 +2440,48 @@ var u=loadUsage();var el=document.getElementById('usage-list');if(!el)return;
 var keys=Object.keys(u);if(!keys.length){el.innerHTML='<div style="font-size:12px;color:#999">暂无记录</div>';return;}
 var total=0;
 el.innerHTML=keys.map(function(mid){var d=u[mid];var p=getMd(mid);var cost=d.cost||(d.tIn/1e6*p.in+d.tOut/1e6*p.out);total+=cost;return'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f5f5f5;font-size:12px"><div>'+esc(p.name)+'<div style="font-size:10px;color:#aaa">↑'+d.tIn.toLocaleString()+' ↓'+d.tOut.toLocaleString()+'</div></div><div style="font-weight:700;color:#ff6b35">'+fmtCost(cost)+'</div></div>';}).join('')+'<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;font-weight:700"><span>💰 总计</span><span style="color:#ff6b35">'+fmtCost(total)+'</span></div>';
+}
+function gistBackup(){
+  var s=loadSettings();
+  var token=s.ghToken;var gistId=s.gistId;
+  if(!token||!gistId){document.getElementById('gist-status').textContent='⚠️ 请先填写 Token 和 Gist ID';return;}
+  var el=document.getElementById('gist-status');el.textContent='备份中...';
+  var chats=loadChats().map(function(c){
+    var cc=JSON.parse(JSON.stringify(c));
+    if(cc.avatarImg&&cc.avatarImg.length>500)cc.avatarImg='';
+    if(cc.members)cc.members.forEach(function(m){if(m.avatarImg&&m.avatarImg.length>500)m.avatarImg='';});
+    return cc;
+  });
+  var payload={chats:chats,settings:s,vault:loadVault(),usage:loadUsage(),feed:JSON.parse(localStorage.getItem('ai_feed_v1')||'[]'),ts:new Date().toISOString()};
+  fetch('https://api.github.com/gists/'+gistId,{
+    method:'PATCH',
+    headers:{'Authorization':'token '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({files:{'aistudio_backup.json':{content:JSON.stringify(payload)}}})
+  }).then(function(r){
+    if(r.ok){el.textContent='✅ 备份成功！'+new Date().toLocaleTimeString();}
+    else{el.textContent='❌ 失败：'+r.status;}
+  }).catch(function(e){el.textContent='❌ 网络错误：'+e.message;});
+}
+function gistRestore(){
+  var s=loadSettings();
+  var token=s.ghToken;var gistId=s.gistId;
+  if(!token||!gistId){document.getElementById('gist-status').textContent='⚠️ 请先填写 Token 和 Gist ID';return;}
+  if(!confirm('⚠️ 恢复会覆盖本地数据，确定吗？'))return;
+  var el=document.getElementById('gist-status');el.textContent='恢复中...';
+  fetch('https://api.github.com/gists/'+gistId,{
+    headers:{'Authorization':'token '+token}
+  }).then(function(r){return r.json();}).then(function(d){
+    var file=d.files&&d.files['aistudio_backup.json'];
+    if(!file){el.textContent='❌ 找不到备份文件';return;}
+    var payload=JSON.parse(file.content);
+    if(payload.chats)localStorage.setItem('aichats_v5',JSON.stringify(payload.chats));
+    if(payload.settings)localStorage.setItem('aisettings_v5',JSON.stringify(payload.settings));
+    if(payload.vault)localStorage.setItem('aistudio_vault',JSON.stringify(payload.vault));
+    if(payload.usage)localStorage.setItem('ai_usage_v2',JSON.stringify(payload.usage));
+    if(payload.feed)localStorage.setItem('ai_feed_v1',JSON.stringify(payload.feed));
+    el.textContent='✅ 恢复成功！备份于：'+new Date(payload.ts).toLocaleString();
+    setTimeout(function(){location.reload();},1500);
+  }).catch(function(e){el.textContent='❌ 错误：'+e.message;});
 }
 function resetUsage(){if(!confirm('确定重置？'))return;localStorage.removeItem('ai_usage_v2');renderUsageUI();}
 function openModal(id){document.getElementById(id).classList.remove('gone');}
