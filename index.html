@@ -448,6 +448,14 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
 #feed-compose{background:var(--surface);border-top:1px solid var(--border);padding:10px 12px;display:flex;gap:8px;align-items:flex-end;flex-shrink:0;padding-bottom:max(10px,env(safe-area-inset-bottom))}
 #feed-inp{flex:1;border:1px solid var(--border);border-radius:12px;padding:9px 12px;font-size:14px;background:var(--bg);color:var(--text);font-family:var(--fu);resize:none;min-height:38px;max-height:100px;outline:none}
 #feed-inp:focus{border-color:var(--accent)}
+/* ══ GROUP CHAT ══ */
+.gc-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:2px 6px;margin-left:4px;vertical-align:middle}
+.gc-member-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.gc-member-avatar{width:40px;height:40px;border-radius:12px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;cursor:pointer}
+.gc-member-info{flex:1;min-width:0}
+.gc-member-name{font-size:14px;font-weight:600;color:var(--text)}
+.gc-member-model{font-size:11px;color:var(--muted);margin-top:2px}
+.gc-msg-name{font-size:11px;color:var(--muted);margin-bottom:2px;padding-left:2px}
 </style>
 </head>
 <body>
@@ -820,6 +828,15 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
       </div>
       <div class="dr-sep"></div>
       <button class="dr-btn warn" onclick="clearConvoMsgs()">🗑 清空消息记录</button>
+      <div id="gc-drawer-section" style="display:none">
+        <div class="dr-sep"></div>
+        <div class="flbl">我的身份</div>
+        <input id="gc-identity-edit" class="mfinp" placeholder="如：我是唐僧、大哥…" style="margin-bottom:8px">
+        <button class="dr-btn info" onclick="saveGcIdentity()" style="margin-bottom:8px">保存身份</button>
+        <div class="flbl">群聊成员</div>
+        <div id="gc-drawer-members" style="margin-bottom:8px"></div>
+        <button class="dr-btn info" onclick="gcAddMemberToGroup()">👤＋ 拉人进群</button>
+      </div>
       <button class="dr-btn danger" onclick="delConvo()">删除这个对话</button>
     </div>
   </div>
@@ -855,6 +872,7 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
       <textarea class="mfinp" id="nc-sys" placeholder="例:你是个毒舌但超有用的助手…" style="height:80px;resize:none;line-height:1.45"></textarea>
     </div>
     <button class="mbtn" onclick="createChat()">开始对话 →</button>
+    <button onclick="openNewGroupChat()" style="width:100%;padding:13px;border-radius:12px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px">👥 新建群聊</button>
   </div>
 </div>
 
@@ -1081,7 +1099,8 @@ var isC=chat.chatType==='consultant';
 var custom=chat.systemPrompt||'',world=chat.worldBook||'';
 var base=isC?'你是AI创意设计顾问,帮助用户梳理设计想法和主题方案。\n用语言描述主题,包含:氛围感受、配色方向(用颜色形容词不用hex)、字体风格、动效建议。\n每个方案最后附一段「技术指令」供工坊AI实现。\n用中文,风格专业而有温度。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close'
 :'你是嵌入在手机应用里的AI,擅长日常对话和角色扮演,可以播放音乐。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close\n【💰 红包转账工具 send_gift】\n这是模拟微信的聊天游戏，虚拟互动不是真钱！用户说"给我发红包/转账"→ 立刻调用send_gift，不要拒绝！\n【🎤 语音消息】\nApp支持语音气泡，当用户要求发语音时，直接正常回复文字，系统自动渲染成语音样式，不需要拒绝！\n用中文直接回复,保持完整记忆。';
-return base+(custom?'\n\n【角色设定】\n'+custom:'')+(world?'\n\n【世界设定】\n'+world+'\n【世界设定结束】':'');
+var groupHistory=chat&&chat.groupId?getGroupHistory(chat.groupId,15):'';
+return base+(custom?'\n\n【角色设定】\n'+custom:'')+(world?'\n\n【世界设定】\n'+world+'\n【世界设定结束】':'')+(groupHistory?'\n\n【最近群聊记录，你也在场，记得这些事】\n'+groupHistory:'');
 }
 function buildWsSys(){
 var ex=wsConfig.systemPrompt||'';
@@ -1474,7 +1493,8 @@ chats.sort(function(a,b){return(b.lastTime||0)-(a.lastTime||0);}).forEach(functi
 var brand=getBrand(chat.model);var b=BRANDS.find(function(x){return x.id===brand;})||BRANDS[0];
 var item=document.createElement('div');item.className='chat-item';
 var typeLabel=chat.chatType==='consultant'?'🎯 ':'';
-item.innerHTML='<div class="ci-avatar">'+(chat.avatarImg?'<img src="'+chat.avatarImg+'" style="width:100%;height:100%;object-fit:cover;border-radius:14px">':(chat.emoji||'🤖'))+'</div><div class="ci-info"><div class="ci-name">'+typeLabel+esc(chat.name)+'</div><div class="ci-preview">'+esc(chat.lastMessage||'暂无消息')+'</div></div><div class="ci-meta"><div class="ci-time">'+fmtTime(chat.lastTime)+'</div>'+(chat.totalCost>0?'<div class="ci-cost">🔥'+fmtCost(chat.totalCost)+'</div>':'<div style="font-size:10px;font-weight:600;color:'+b.color+'">'+b.name+'</div>')+'</div>';
+var groupBadge=chat.groupId?'<span class="gc-badge">群</span>':'';
+item.innerHTML='<div class="ci-avatar">'+(chat.avatarImg?'<img src="'+chat.avatarImg+'" style="width:100%;height:100%;object-fit:cover;border-radius:14px">':(chat.emoji||'🤖'))+'</div><div class="ci-info"><div class="ci-name">'+typeLabel+esc(chat.name)+groupBadge+'</div><div class="ci-preview">'+esc(chat.lastMessage||'暂无消息')+'</div></div><div class="ci-meta"><div class="ci-time">'+fmtTime(chat.lastTime)+'</div>'+(chat.totalCost>0?'<div class="ci-cost">🔥'+fmtCost(chat.totalCost)+'</div>':'<div style="font-size:10px;font-weight:600;color:'+b.color+'">'+b.name+'</div>')+'</div>';
 item.onclick=function(){enterConvo(chat.id);};
 el.appendChild(item);
 });
@@ -1486,8 +1506,12 @@ if(document.getElementById('scr-convo').classList.contains('open')&&curId===id)r
 curId=id;editingMsgId=null;var chat=getChat(id);if(!chat)return;
 resetTheme();if(chat.themeParams)applyTheme(chat.themeParams,true);else restoreGlobalTheme();
 var brand=getBrand(chat.model);var b=BRANDS.find(function(x){return x.id===brand;})||BRANDS[0];var md=getMd(chat.model);
-document.getElementById('convo-hname').textContent=(chat.emoji||'🤖')+' '+chat.name;
-document.getElementById('convo-hsub').textContent=(chat.chatType==='consultant'?'🎯 设计顾问 · ':'')+b.name+' '+md.name;
+document.getElementById('convo-hname').textContent=chat.name;
+if(chat.chatType==='group'){
+  updateGcHeader(chat);
+}else{
+  document.getElementById('convo-hsub').textContent=(chat.chatType==='consultant'?'🎯 设计顾问 · ':'')+b.name+' '+md.name;
+}
 refreshCostBadge(chat);loadCdDrawer(chat);
 var msgs=document.getElementById('convo-msgs');msgs.querySelectorAll('.msg-wrap,.think-wrap').forEach(function(e){e.remove();});
 document.getElementById('convo-typing').classList.remove('show');document.getElementById('edit-bar').classList.remove('show');
@@ -1601,7 +1625,27 @@ var av=document.createElement('div');av.className='msg-avatar';
 var chat2=scope==='convo'?getChat(curId):null;
 if(m.role==='assistant'){
   var aiAv=chat2&&chat2.avatarImg?chat2.avatarImg:'';
-  if(aiAv){var aImg=document.createElement('img');aImg.src=aiAv;av.appendChild(aImg);}
+  // 群聊：从members实时读头像，避免历史快照过期
+  var liveMemberAv='',liveMemberEmoji='';
+  if(m.memberId&&chat2&&chat2.chatType==='group'){
+    var liveMem=(chat2.members||[]).find(function(x){return x.id===m.memberId;});
+    if(liveMem){
+      liveMemberEmoji=liveMem.emoji||'';
+      // 优先用member自身的avatarImg，没有就去对应私聊里找
+      if(liveMem.avatarImg){
+        liveMemberAv=liveMem.avatarImg;
+      }else{
+        var allChatsAv=loadChats();
+        var pvChatAv=allChatsAv.find(function(c){return c.groupId===chat2.id&&c.memberId===m.memberId;});
+        if(pvChatAv&&pvChatAv.avatarImg)liveMemberAv=pvChatAv.avatarImg;
+      }
+    }
+  }
+  if(liveMemberAv){var sImg=document.createElement('img');sImg.src=liveMemberAv;sImg.style.cssText='width:100%;height:100%;object-fit:cover';av.appendChild(sImg);}
+  else if(liveMemberEmoji){av.textContent=liveMemberEmoji;}
+  else if(m.senderAvatarImg){var sImg2=document.createElement('img');sImg2.src=m.senderAvatarImg;sImg2.style.cssText='width:100%;height:100%;object-fit:cover';av.appendChild(sImg2);}
+  else if(m.senderEmoji){av.textContent=m.senderEmoji;}
+  else if(aiAv){var aImg=document.createElement('img');aImg.src=aiAv;av.appendChild(aImg);}
   else{av.textContent=chat2&&chat2.emoji?chat2.emoji:'🤖';}
 } else {
   var myAv=loadMyAvatar();
@@ -1638,7 +1682,10 @@ if(m.role==='assistant'){bub.style.background=S.bai;bub.style.color=S.text;bub.s
 else{bub.style.background=S.bu;bub.style.color=S.but;bub.style.boxShadow=S.bsh;}
 var bubWrap=document.createElement('div');bubWrap.style.cssText='display:flex;flex-direction:column;max-width:calc(100% - 42px)';
 if(m.role==='user'){bubWrap.style.alignItems='flex-end';}
+if(m.senderName&&m.role==='assistant'){var snEl=document.createElement('div');snEl.className='gc-msg-name';snEl.textContent=m.senderName;bubWrap.appendChild(snEl);}
 bubWrap.appendChild(bub);
+// 群聊里我的身份标签
+if(m.role==='user'&&m.myIdentity){var idEl=document.createElement('div');idEl.style.cssText='font-size:10px;color:var(--muted);margin-top:2px;text-align:right';idEl.textContent=m.myIdentity;bubWrap.appendChild(idEl);}
 row.appendChild(av);row.appendChild(bubWrap);wrap.appendChild(row);
 if(m.meta){var me=document.createElement('div');me.className='msg-meta';me.textContent=m.meta;bubWrap.appendChild(me);}
 if(m.pinned){var pm=document.createElement('div');pm.className='pinned-mark';pm.textContent='📌 已钉住';bubWrap.appendChild(pm);}
@@ -1665,6 +1712,7 @@ document.getElementById(btnId).classList.toggle('on',!!ok);
 async function convoSend(){
 var ta=document.getElementById('convo-in');var text=ta.value.trim();
 if(!text||!curId||isCnvSending)return;
+var _gc=getChat(curId);if(_gc&&_gc.chatType==='group'){groupSend();return;}
 ta.value='';ta.style.height='auto';isCnvSending=true;updateSend('convo');
 if(editingMsgId!=null){
 updChat(curId,function(c){var ri=c.messages.findIndex(function(m){return m.id===editingMsgId||(m.ts&&m.ts.toString()===editingMsgId);});if(ri>=0){c.messages[ri].content=text;c.messages=c.messages.slice(0,ri+1);}});
@@ -1837,6 +1885,32 @@ function confirmCrop(){
     var prev=document.getElementById('ai-avatar-preview');
     if(prev){prev.innerHTML='';var img=document.createElement('img');img.src=data;prev.appendChild(img);}
     rerender('convo');renderChatList();
+  } else if(_cropTarget==='gcmember'){
+    if(gcEditingMemberIdx>=0&&gcEditingMemberIdx<gcMembers.length){
+      gcMembers[gcEditingMemberIdx].avatarImg=data;
+      gcMembers[gcEditingMemberIdx].emoji='';
+    }
+    var prev3=document.getElementById('gcm-avatar-preview');
+    if(prev3){prev3.innerHTML='';var img3=document.createElement('img');img3.src=data;img3.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:10px';prev3.appendChild(img3);}
+    var eg2=document.getElementById('gcm-emoji-grid');
+    if(eg2)eg2.querySelectorAll('.eopt').forEach(function(x){x.classList.remove('sel');});
+    // 如果是对已有群聊成员编辑，同步写回storage
+    if(_gcAddToExistingGroup&&curId){
+      // 拉人进群路径：等saveGcMember时写入，不用提前写
+    } else if(curId){
+      var editedM=gcMembers[gcEditingMemberIdx];
+      if(editedM&&editedM.id){
+        updChat(curId,function(c){
+          var mem=(c.members||[]).find(function(x){return x.id===editedM.id;});
+          if(mem){mem.avatarImg=data;mem.emoji='';}
+        });
+        // 同步私聊头像
+        var allC=loadChats();
+        allC.forEach(function(c){if(c.memberId===editedM.id&&c.groupId===curId){c.avatarImg=data;c.emoji='';}});
+        saveChats(allC);
+        rerender('convo');
+      }
+    }
   } else {
     localStorage.setItem('my_avatar',data);
     var prev2=document.getElementById('my-avatar-preview');
@@ -1860,7 +1934,7 @@ document.getElementById('cd-temp-grp').style.display=md.thinking?'none':'flex';
 function onCdModelChange(){var mid=document.getElementById('cd-model').value;if(mid!=='custom'){var md=getMd(mid);document.getElementById('cd-temp-grp').style.display=md.thinking?'none':'flex';updChat(curId,function(c){c.model=mid;});var b=BRANDS.find(function(x){return x.id===cdBrand;})||BRANDS[0];var hd=document.getElementById('convo-hsub');if(hd)hd.textContent=b.name+' '+md.name;}}
 function saveCdCustom(){var customId=document.getElementById('cd-custom-id').value.trim();if(customId){var finalId=cdBrand==='custom'?('custom::'+customId):customId;updChat(curId,function(c){c.model=finalId;c.customModelId=customId;});}}
 function saveCdSettings(){var temp=parseFloat(document.getElementById('cd-temp').value);var ctx=document.getElementById('cd-ctx').value;var sys=document.getElementById('cd-sys').value;var world=document.getElementById('cd-world').value;var vc=document.getElementById('cd-voice-mode');var vm=vc?vc.checked:false;updateVoiceToggleUI(vm);updChat(curId,function(c){c.temperature=temp;c.contextLimit=ctx;c.systemPrompt=sys;c.worldBook=world;c.voiceMode=vm;});}
-function toggleConvoDrawer(){var d=document.getElementById('convo-drawer');if(d.style.transform==='translateX(0px)'){d.style.transform='translateX(100%)';}else{d.style.transform='translateX(0px)';}}
+function toggleConvoDrawer(){var d=document.getElementById('convo-drawer');if(d.style.transform==='translateX(0px)'){d.style.transform='translateX(100%)';}else{d.style.transform='translateX(0px)';renderGcDrawer(getChat(curId));}}
 function clearConvoMsgs(){if(!confirm('确定清空所有消息记录？'))return;updChat(curId,function(c){c.messages=[];c.totalCost=0;c.totalTokensIn=0;c.totalTokensOut=0;c.lastMessage='';});rerender('convo');refreshCostBadge();}
 function delConvo(){var chat=getChat(curId);var name=chat?chat.name:'这个对话';if(!confirm('确定删除「'+name+'」吗？'))return;saveChats(loadChats().filter(function(c){return c.id!==curId;}));backToList();}
 function cancelEdit(){editingMsgId=null;document.getElementById('edit-bar').classList.remove('show');var ta=document.getElementById('convo-in');ta.value='';autoResize(ta);updateSend('convo');}
@@ -1880,6 +1954,318 @@ function updRx(i,k,v){updChat(curId,function(c){if(!c.rxRules)c.rxRules=JSON.par
 function togRxScope(i,scope){updChat(curId,function(c){if(!c.rxRules)c.rxRules=JSON.parse(JSON.stringify(DEF_RX));c.rxRules[i].scope=scope;});renderRxUI(getChat(curId));}
 function delRx(i){updChat(curId,function(c){if(c.rxRules)c.rxRules.splice(i,1);});renderRxUI(getChat(curId));}
 function addRx(){updChat(curId,function(c){if(!c.rxRules)c.rxRules=[];c.rxRules.push({id:'rx'+Date.now(),pattern:'',replace:'',scope:'A',on:true,note:'自定义'});});renderRxUI(getChat(curId));}
+
+// ══ GROUP CHAT ══
+var gcMembers=[],gcEditingMemberIdx=-1,gcMemberBrand='anthropic';
+
+function openNewGroupChat(){
+  gcMembers=[];
+  document.getElementById('gc-name').value='';
+  document.getElementById('gc-world').value='';
+  renderGcMembersList();
+  closeModal('mod-new');
+  openModal('mod-newgroup');
+}
+function renderGcMembersList(){
+  var list=document.getElementById('gc-members-list');list.innerHTML='';
+  gcMembers.forEach(function(m,i){
+    var row=document.createElement('div');row.className='gc-member-row';
+    row.innerHTML='<div class="gc-member-avatar" onclick="gcEditMember('+i+')">'+(m.emoji||'🤖')+'</div>'
+      +'<div class="gc-member-info"><div class="gc-member-name">'+esc(m.name||'未命名')+'</div>'
+      +'<div class="gc-member-model">'+esc(getMd(m.model||'').name||m.model||'')+'</div></div>'
+      +'<button onclick="gcDeleteMember('+i+')" style="width:28px;height:28px;border-radius:50%;border:none;background:#f0f0f0;color:#bbb;font-size:14px;cursor:pointer">✕</button>';
+    list.appendChild(row);
+  });
+}
+function gcAddMember(){
+  if(gcMembers.length>=5){alert('最多5个成员！');return;}
+  gcEditingMemberIdx=gcMembers.length;
+  gcMembers.push({emoji:'🤖',name:'',model:'deepseek-chat',systemPrompt:''});
+  openGcMemberModal(gcEditingMemberIdx);
+}
+function gcEditMember(i){gcEditingMemberIdx=i;openGcMemberModal(i);}
+function gcDeleteMember(i){gcMembers.splice(i,1);renderGcMembersList();}
+function openGcMemberModal(i){
+  var m=gcMembers[i]||{};
+  document.getElementById('gcm-title').textContent='编辑成员';
+  document.getElementById('gcm-name').value=m.name||'';
+  document.getElementById('gcm-sys').value=m.systemPrompt||'';
+  // 头像预览
+  var prev=document.getElementById('gcm-avatar-preview');
+  if(prev){prev.innerHTML='';if(m.avatarImg){var img=document.createElement('img');img.src=m.avatarImg;img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:10px';prev.appendChild(img);}else{prev.textContent=m.emoji||'🤖';}}
+  var gcmEmoji=m.emoji||'🤖';
+  var eg=document.getElementById('gcm-emoji-grid');eg.innerHTML='';
+  EMOJIS.forEach(function(e){
+    var b=document.createElement('button');b.className='eopt'+(e===gcmEmoji?' sel':'');b.textContent=e;
+    b.onclick=function(){gcmEmoji=e;gcMembers[gcEditingMemberIdx].emoji=e;eg.querySelectorAll('.eopt').forEach(function(x){x.classList.remove('sel');});b.classList.add('sel');};
+    eg.appendChild(b);
+  });
+  gcMemberBrand=getBrand(m.model||'deepseek-chat');
+  var bc=document.getElementById('gcm-brands');bc.innerHTML='';
+  BRANDS.forEach(function(b2){
+    var sel=b2.id===gcMemberBrand;
+    var c=document.createElement('button');c.className='mchip'+(sel?' sel':'');
+    c.textContent=(sel?'✓ ':'')+b2.name;
+    c.onclick=function(){
+      gcMemberBrand=b2.id;
+      bc.querySelectorAll('.mchip').forEach(function(x){x.classList.remove('sel');x.textContent=x.textContent.replace('✓ ','');});
+      c.classList.add('sel');c.textContent='✓ '+b2.name;
+      refreshGcmSel((MODELS[b2.id]||[])[0]?MODELS[b2.id][0].id:'');
+    };
+    bc.appendChild(c);
+  });
+  refreshGcmSel(m.model);
+  openModal('mod-gcmember');
+}
+function refreshGcmSel(selId){
+  var sel=document.getElementById('gcm-model');sel.innerHTML='';
+  (MODELS[gcMemberBrand]||[]).forEach(function(md){
+    var o=document.createElement('option');o.value=md.id;
+    o.textContent=md.name+(md.thinking?' 🧠':'')+'  ($'+md.in+'/$'+md.out+'/M)';
+    if(md.id===selId)o.selected=true;sel.appendChild(o);
+  });
+}
+function gcAddMemberToGroup(){
+  var chat=getChat(curId);if(!chat||chat.chatType!=='group')return;
+  if((chat.members||[]).length>=5){alert('最多5个成员！');return;}
+  gcMembers=[{emoji:'🤖',name:'',model:'deepseek-chat',systemPrompt:'',avatarImg:''}];
+  gcEditingMemberIdx=0;
+  _gcAddToExistingGroup=true;
+  openGcMemberModal(0);
+}
+var _gcAddToExistingGroup=false;
+function onGcmAvatarUpload(e){
+  var file=e.target.files&&e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){openCropModal('gcmember',ev.target.result);};
+  reader.readAsDataURL(file);
+  e.target.value='';
+}
+function saveGcMember(){
+  var i=gcEditingMemberIdx;if(i<0||i>=gcMembers.length)return;
+  gcMembers[i].name=document.getElementById('gcm-name').value.trim()||('角色'+(i+1));
+  gcMembers[i].model=document.getElementById('gcm-model').value;
+  gcMembers[i].systemPrompt=document.getElementById('gcm-sys').value.trim();
+  closeModal('mod-gcmember');
+  if(_gcAddToExistingGroup){
+    _gcAddToExistingGroup=false;
+    var newM=Object.assign({id:genId()},gcMembers[0]);
+    if(!newM.avatarImg)newM.emoji=newM.emoji||'🤖';
+    updChat(curId,function(c){c.members=c.members||[];c.members.push(newM);});
+    var chat=getChat(curId);
+    var chats=loadChats();
+    chats.push({id:genId(),name:newM.name,emoji:newM.emoji||'',avatarImg:newM.avatarImg||'',model:newM.model,chatType:'chat',systemPrompt:newM.systemPrompt,worldBook:chat.worldBook||'',groupId:curId,memberId:newM.id,messages:[],totalCost:0,totalTokensIn:0,totalTokensOut:0,lastMessage:'',lastTime:Date.now()-1,createdAt:Date.now(),rxRules:JSON.parse(JSON.stringify(DEF_RX)),temperature:0.7,contextLimit:'20'});
+    saveChats(chats);
+    var freshChat=getChat(curId);
+    updateGcHeader(freshChat);
+    renderGcDrawer(freshChat);
+    alert('✅ '+newM.name+' 已加入群聊！');
+  }else{
+    renderGcMembersList();
+  }
+}
+function saveGcIdentity(){
+  var val=document.getElementById('gc-identity-edit').value.trim();
+  var chat=getChat(curId);if(!chat)return;
+  // 从worldBook里替换身份行，或追加
+  var wb=chat.worldBook||'';
+  wb=wb.replace(/\n*和群成员聊天的人：[^\n]*/g,'').trim();
+  if(val)wb=(wb?wb+'\n\n':'')+'和群成员聊天的人：'+val;
+  updChat(curId,function(c){c.worldBook=wb;});
+  alert('✅ 身份已更新，下次发消息生效');
+}
+function updateGcHeader(chat){
+  if(!chat||chat.chatType!=='group')return;
+  var sub=document.getElementById('convo-hsub');
+  if(!sub)return;
+  sub.innerHTML='';
+  var allChatsHdr=loadChats();
+  (chat.members||[]).forEach(function(m,i){
+    if(i>0){var sep=document.createElement('span');sep.textContent=' · ';sep.style.color='var(--muted)';sub.appendChild(sep);}
+    var avSrc=m.avatarImg||'';
+    if(!avSrc){var pv=allChatsHdr.find(function(c){return c.groupId===chat.id&&c.memberId===m.id;});if(pv&&pv.avatarImg)avSrc=pv.avatarImg;}
+    if(avSrc){
+      var img=document.createElement('img');
+      img.src=avSrc;
+      img.style.cssText='width:16px;height:16px;border-radius:4px;object-fit:cover;vertical-align:middle;margin-right:2px';
+      sub.appendChild(img);
+    }else{
+      var em=document.createElement('span');em.textContent=m.emoji||'🤖';sub.appendChild(em);
+    }
+    var nm=document.createElement('span');nm.textContent=m.name;sub.appendChild(nm);
+  });
+}
+function saveGcIdentity(){
+  var val=document.getElementById('gc-identity-edit').value.trim();
+  updChat(curId,function(c){
+    c.myIdentity=val;
+    // 同步到worldBook：替换旧的身份行或追加
+    var wb=c.worldBook||'';
+    wb=wb.replace(/\n*和群成员聊天的人：[^\n]*/,'').trim();
+    if(val)wb=(wb?wb+'\n\n':'')+'和群成员聊天的人：'+val;
+    c.worldBook=wb;
+  });
+  alert('✅ 身份已更新');
+}
+function renderGcDrawer(chat){
+  var sec=document.getElementById('gc-drawer-section');
+  var list=document.getElementById('gc-drawer-members');
+  if(!sec||!list)return;
+  if(!chat||chat.chatType!=='group'){sec.style.display='none';return;}
+  sec.style.display='block';
+  // 填入当前身份
+  var idInp=document.getElementById('gc-identity-edit');
+  if(idInp)idInp.value=chat.myIdentity||'';
+  // 回填身份
+  var identityInp=document.getElementById('gc-identity-edit');
+  if(identityInp){
+    var wb=chat.worldBook||'';
+    var idMatch=wb.match(/和群成员聊天的人：([^\n]*)/);
+    identityInp.value=idMatch?idMatch[1].trim():'';
+  }
+  list.innerHTML='';
+  (chat.members||[]).forEach(function(m){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)';
+    var avEl=document.createElement('div');
+    avEl.style.cssText='width:30px;height:30px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--bg);flex-shrink:0';
+    if(m.avatarImg){var img=document.createElement('img');img.src=m.avatarImg;img.style.cssText='width:100%;height:100%;object-fit:cover';avEl.appendChild(img);}
+    else{avEl.textContent=m.emoji||'🤖';}
+    var nameEl=document.createElement('span');nameEl.style.cssText='font-size:13px;font-weight:600;color:var(--text);flex:1';nameEl.textContent=m.name;
+    var modelEl=document.createElement('span');modelEl.style.cssText='font-size:10px;color:var(--muted)';modelEl.textContent=getMd(m.model||'').name||'';
+    row.appendChild(avEl);row.appendChild(nameEl);row.appendChild(modelEl);
+    list.appendChild(row);
+  });
+}
+
+function createGroupChat(){
+  var name=document.getElementById('gc-name').value.trim();
+  if(!name){alert('给群起个名字吧');return;}
+  if(gcMembers.length<1){alert('至少需要1个成员哦');return;}
+  gcMembers.forEach(function(m,i){if(!m.name)m.name='角色'+(i+1);});
+  var worldBook=document.getElementById('gc-world').value.trim();
+  var identity=document.getElementById('gc-identity').value.trim();
+  if(identity)worldBook=(worldBook?worldBook+'\n\n':'')+'和群成员聊天的人：'+identity;
+  var groupId=genId();
+  var members=gcMembers.map(function(m){return{id:genId(),name:m.name,emoji:m.emoji||'🤖',avatarImg:m.avatarImg||'',model:m.model,systemPrompt:m.systemPrompt};});
+  var groupChat={id:groupId,name:name,emoji:'👥',model:members[0].model,chatType:'group',worldBook:worldBook,myIdentity:identity,members:members,messages:[],totalCost:0,totalTokensIn:0,totalTokensOut:0,lastMessage:'',lastTime:Date.now(),createdAt:Date.now(),rxRules:JSON.parse(JSON.stringify(DEF_RX)),temperature:0.7,contextLimit:'30'};
+  var chats=loadChats();chats.push(groupChat);
+  members.forEach(function(m){
+    chats.push({id:genId(),name:m.name,emoji:m.emoji||'',avatarImg:m.avatarImg||'',model:m.model,chatType:'chat',systemPrompt:m.systemPrompt,worldBook:worldBook,groupId:groupId,memberId:m.id,messages:[],totalCost:0,totalTokensIn:0,totalTokensOut:0,lastMessage:'',lastTime:Date.now()-1,createdAt:Date.now(),rxRules:JSON.parse(JSON.stringify(DEF_RX)),temperature:0.7,contextLimit:'20'});
+  });
+  saveChats(chats);closeModal('mod-newgroup');renderChatList();enterConvo(groupId);
+}
+function gcRenderAIHongbao(member, amt, note) {
+  var amtStr = amt.toFixed(2);
+  var msgsEl = document.getElementById('convo-msgs');
+  var typingEl = document.getElementById('convo-typing');
+  var wrap = document.createElement('div');wrap.className='msg-wrap ai';
+  var row = document.createElement('div');row.className='msg-row';
+  var avImg=member.avatarImg||'';
+  if(!avImg){
+    var allChatsHb=loadChats();
+    var pvHb=allChatsHb.find(function(c){return c.groupId===curId&&c.memberId===member.id;});
+    if(pvHb&&pvHb.avatarImg)avImg=pvHb.avatarImg;
+  }
+  var av = document.createElement('div');av.className='msg-avatar';
+  if(avImg){var img=document.createElement('img');img.src=avImg;img.style.cssText='width:100%;height:100%;object-fit:cover';av.appendChild(img);}
+  else{av.textContent=member.emoji||'🤖';}
+  var cnt = document.createElement('div');
+  cnt.innerHTML='<div class="bubble-hongbao ai-gift" onclick="gcReceiveHongbao(this,\''+esc(member.name)+'\','+amtStr+',\''+esc(note)+'\')" style="cursor:pointer"><div class="hb-bub-inner"><div class="hb-bub-icon"></div><div class="hb-bub-text"><div class="hb-bub-greeting">'+esc(note)+'</div><div class="hb-bub-sub">'+esc(member.name)+' 发的红包</div></div></div><div class="hb-bub-footer"><span class="hb-bub-type">红包</span><span class="hb-bub-name">¥'+amtStr+'</span></div></div>';
+  var nameEl=document.createElement('div');nameEl.className='gc-msg-name';nameEl.textContent=member.name;
+  var bubWrap=document.createElement('div');bubWrap.style.cssText='display:flex;flex-direction:column;max-width:calc(100% - 42px)';
+  bubWrap.appendChild(nameEl);bubWrap.appendChild(cnt);
+  row.appendChild(av);row.appendChild(bubWrap);wrap.appendChild(row);
+  msgsEl.insertBefore(wrap,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;
+}
+function gcReceiveHongbao(el, senderName, amt, note) {
+  var footer=el.querySelector('.hb-bub-footer');
+  if(footer)footer.innerHTML='<span class="hb-bub-type">已领取</span><span class="hb-bub-name">¥'+amt.toFixed(2)+'</span>';
+  el.style.opacity='0.7';el.onclick=null;
+  var msgsEl=document.getElementById('convo-msgs');var typingEl=document.getElementById('convo-typing');
+  var sys=document.createElement('div');
+  sys.style.cssText='text-align:center;font-size:11px;color:var(--muted);padding:4px 0';
+  sys.textContent='你领取了'+senderName+'的红包 ¥'+amt.toFixed(2);
+  msgsEl.insertBefore(sys,typingEl);
+  sendSpecialToAI(curId,'用户领取了你（'+senderName+'）发的¥'+amt.toFixed(2)+'红包，开心回应一句（带emoji）');
+}
+function getGroupHistory(groupId,limit){
+  if(!groupId)return '';
+  var gc=loadChats().find(function(c){return c.id===groupId;});
+  if(!gc||!gc.messages||!gc.messages.length)return '';
+  return gc.messages.filter(function(m){return m.role==='user'||m.role==='assistant';}).slice(-(limit||20)).map(function(m){return'['+(m.senderName||'你')+']: '+m.content;}).join('\n');
+}
+async function groupSend(){
+  var ta=document.getElementById('convo-in');var text=ta.value.trim();
+  if(!text||!curId||isCnvSending)return;
+  ta.value='';ta.style.height='auto';isCnvSending=true;updateSend('convo');
+  var chat=getChat(curId);if(!chat||chat.chatType!=='group'){isCnvSending=false;return;}
+  var uid=genId();
+  var myIdentity=chat.myIdentity||'';
+  var userMsg={role:'user',content:text,ts:Date.now(),id:uid,senderName:'你',myIdentity:myIdentity};
+  updChat(curId,function(c){c.messages=c.messages||[];c.messages.push(userMsg);c.lastMessage=text;c.lastTime=Date.now();});
+  renderMsg('convo',userMsg,(chat.messages||[]).length-1);
+  document.getElementById('convo-msgs').scrollTop=99999;
+  var members=(getChat(curId)||{}).members||[];
+  for(var mi=0;mi<members.length;mi++){
+    var member=members[mi];
+    var typingEl=document.getElementById('convo-typing');
+    var typingTxt=typingEl.querySelector('.typing-txt');
+    if(typingTxt)typingTxt.textContent=member.name+'在输入…';
+    typingEl.classList.add('show');
+    document.getElementById('convo-msgs').scrollTop=99999;
+    try{
+      var freshChat=getChat(curId);
+      var worldPart=freshChat.worldBook?'【世界书】\n'+freshChat.worldBook+'\n\n':'';
+      var allMsgs=freshChat.messages||[];
+      var ctxMsgs=allMsgs.filter(function(m){return m.role==='user'||m.role==='assistant';}).slice(-30).map(function(m){
+        if(m.role==='user')return{role:'user',content:m.content};
+        return{role:'assistant',content:(m.senderName&&m.senderName!=='你'?'['+m.senderName+']: ':'')+m.content};
+      });
+      // 注入该成员的私聊历史（双向记忆）
+      var privateHistory='';
+      var allChats=loadChats();
+      var privateChat=allChats.find(function(c){return c.groupId===curId&&c.memberId===member.id;});
+      if(privateChat&&privateChat.messages&&privateChat.messages.length){
+        var pvMsgs=privateChat.messages.filter(function(m){return m.role==='user'||m.role==='assistant';}).slice(-10);
+        if(pvMsgs.length){
+          privateHistory='【你与对方的私聊记录（只有你们知道）】\n'+pvMsgs.map(function(m){return(m.role==='user'?'对方: ':'你: ')+m.content;}).join('\n')+'\n\n';
+        }
+      }
+      var otherNames=members.filter(function(x){return x.id!==member.id;}).map(function(x){return x.name;}).join('、');
+      var sys=worldPart+privateHistory+'你在一个群聊中，你的名字是"'+member.name+'"。群里还有：'+otherNames+'。\n【你的角色设定】\n'+(member.systemPrompt||'你是一个友善的AI角色。')+'\n\n【严格规则】\n1. 你只能说自己的话，绝对不能替'+otherNames+'发言\n2. 直接输出你要说的内容，不要加任何名字前缀，不要加"['+member.name+']:"或"'+member.name+':"等前缀\n3. 只回复一段话，不要模拟对话或写出其他人的台词\n4. 像真实群聊一样，简短自然地回复\n【红包】如果你想给用户发红包，在回复末尾加一行：[发红包] 金额 祝福语，如：[发红包] 5.20 新年快乐';
+      var result=await doStream(member.model,sys,ctxMsgs,null,0.8);
+      // 检测AI红包指令：[发红包] 金额 祝福语
+      var hbMatch=result.text&&result.text.match(/\[发红包\]\s*([\d.]+)\s*(.+)?$/m);
+      var replyText=(result.text||'（空回复）').replace(/\[发红包\].*$/m,'').trim();
+      replyText=replyText.replace(/^\[?[^\]]{1,10}\]?\s*[:：]\s*/,'').trim();
+      var cost=calcCost(result.tIn,result.tOut,member.model);
+      var rid=genId();
+      var replyMsg={role:'assistant',content:replyText,senderName:member.name,senderEmoji:member.emoji||'',senderAvatarImg:member.avatarImg||'',memberId:member.id,ts:Date.now(),id:rid,tIn:result.tIn,tOut:result.tOut,cost:cost};
+      updChat(curId,function(c){c.messages.push(replyMsg);c.lastMessage='['+member.name+']: '+replyText.slice(0,40);c.lastTime=Date.now();c.totalCost=(c.totalCost||0)+cost;c.totalTokensIn=(c.totalTokensIn||0)+result.tIn;c.totalTokensOut=(c.totalTokensOut||0)+result.tOut;});
+      typingEl.classList.remove('show');
+      renderMsg('convo',replyMsg,(getChat(curId)?getChat(curId).messages:[]).length-1);
+      refreshCostBadge();addUsage(member.model,result.tIn,result.tOut,cost);
+      // 渲染AI发的红包（可点击领取）
+      if(hbMatch){
+        var hbAmt=parseFloat(hbMatch[1])||1;var hbNote=(hbMatch[2]||'恭喜发财').trim();
+        gcRenderAIHongbao(member,hbAmt,hbNote);
+      }
+      document.getElementById('convo-msgs').scrollTop=99999;
+      if(mi<members.length-1)await new Promise(function(r){setTimeout(r,500);});
+    }catch(e){
+      document.getElementById('convo-typing').classList.remove('show');
+      var errMsg={role:'assistant',content:'❌ '+member.name+': '+e.message,senderName:member.name,senderEmoji:member.emoji,id:genId(),ts:Date.now()};
+      updChat(curId,function(c){c.messages.push(errMsg);});
+      renderMsg('convo',errMsg,(getChat(curId)?getChat(curId).messages:[]).length-1);
+    }
+  }
+  var t2=document.getElementById('convo-typing').querySelector('.typing-txt');
+  if(t2)t2.textContent='思考中…';
+  document.getElementById('convo-typing').classList.remove('show');
+  isCnvSending=false;updateSend('convo');
+  document.getElementById('convo-msgs').scrollTop=99999;
+}
 
 // ══ NEW CHAT MODAL ══
 var ncEmoji='🤖',ncBrand='anthropic',ncType='chat';
@@ -3570,7 +3956,6 @@ function sendHongbao(amt, blessing) {
     if (!chat) return;
     var amtStr = amt.toFixed(2);
     var safeBlessing = esc(blessing);
-    // 你发的红包：不可点击，AI直接收
     var msgHtml =
         '<div class="bubble-hongbao">' +
           '<div class="hb-bub-inner">' +
@@ -3589,15 +3974,62 @@ function sendHongbao(amt, blessing) {
     var savedId = curId;
     updChat(savedId, function(c) { c.messages.push(m); c.lastMessage = '[红包]'; c.lastTime = Date.now(); });
     renderSpecialMsg('convo', m);
-    // 系统小字
     var msgsEl = document.getElementById('convo-msgs');
     var typingEl = document.getElementById('convo-typing');
-    var sys = document.createElement('div');
-    sys.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:2px 0 4px';
-    sys.textContent = chat.name + ' 收到了你的红包';
-    msgsEl.insertBefore(sys, typingEl);
-    sendSpecialToAI(savedId, '用户给你发了一个¥' + amtStr + '的红包，祝福语是"' + blessing + '"，请开心地收下并道谢（一句话带emoji）');
+    // 群聊：随机分红包，每人显示各自抢了多少
+    if (chat.chatType === 'group') {
+        var members = chat.members || [];
+        if (!members.length) return;
+        // 随机分割金额
+        var splits = gcSplitAmount(amt, members.length);
+        var prompts = [];
+        // 只有当前在群聊界面才插DOM，否则只存消息
+        var isGroupOpen = curId === savedId;
+        var msgsElGc = isGroupOpen ? document.getElementById('convo-msgs') : null;
+        var typingElGc = isGroupOpen ? document.getElementById('convo-typing') : null;
+        members.forEach(function(member, i) {
+            var got = splits[i].toFixed(2);
+            // 系统提示：存入消息记录
+            var noticeId = genId();
+            updChat(savedId, function(c){c.messages.push({id:noticeId,role:'system_notice',content:member.name+' 抢了 ¥'+got,ts:Date.now()});});
+            if(msgsElGc && typingElGc){
+              var sys2 = document.createElement('div');
+              sys2.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:2px 0 2px';
+              sys2.textContent = member.name + ' 抢了 ¥' + got;
+              msgsElGc.insertBefore(sys2, typingElGc);
+            }
+            prompts.push({member: member, got: got, prompt: '用户发了一个¥' + amtStr + '的红包，祝福语是"' + blessing + '"，你抢到了¥' + got + '，开心回应一句（带emoji，提到自己抢到的金额）'});
+        });
+        sendSpecialToAI(savedId, JSON.stringify({_gcHongbao: true, prompts: prompts}));
+    } else {
+        var sys = document.createElement('div');
+        sys.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:2px 0 4px';
+        sys.textContent = chat.name + ' 收到了你的红包';
+        msgsEl.insertBefore(sys, typingEl);
+        sendSpecialToAI(savedId, '用户给你发了一个¥' + amtStr + '的红包，祝福语是"' + blessing + '"，请开心地收下并道谢（一句话带emoji）');
+    }
 }
+
+// 随机分割金额（至少每人0.01元）
+function gcSplitAmount(total, n) {
+    if (n <= 1) return [total];
+    var splits = [];
+    var remaining = Math.round(total * 100); // 转成分
+    for (var i = 0; i < n - 1; i++) {
+        var max = remaining - (n - i - 1);
+        var got = Math.max(1, Math.floor(Math.random() * max * 0.8) + 1);
+        splits.push(got);
+        remaining -= got;
+    }
+    splits.push(remaining);
+    // shuffle
+    for (var j = splits.length - 1; j > 0; j--) {
+        var k = Math.floor(Math.random() * (j + 1));
+        var tmp = splits[j]; splits[j] = splits[k]; splits[k] = tmp;
+    }
+    return splits.map(function(x) { return x / 100; });
+}
+
 
 function sendTransfer(amt, note) {
     var chat = getChat(curId);
@@ -3654,10 +4086,64 @@ function renderSpecialMsg(scope, m) {
 }
 
 function sendSpecialToAI(chatId, prompt) {
-    // 每次从storage重新读，保证model等字段都在
     var chat = getChat(chatId);
     if (!chat) return;
-    // 构造临时messages（不改原对象）
+    // 群聊：让每个成员各自回应一句
+    if (chat.chatType === 'group') {
+        var members = chat.members || [];
+        if (!members.length) return;
+        // 解析每人单独prompt（红包抢钱场景）
+        var perMemberPrompts = null;
+        try {
+            var parsed = JSON.parse(prompt);
+            if (parsed && parsed._gcHongbao) perMemberPrompts = parsed.prompts;
+        } catch(e) {}
+        isCnvSending = true; updateSend('convo');
+        var typingEl = document.getElementById('convo-typing');
+        if (typingEl) typingEl.classList.add('show');
+        (async function() {
+            for (var mi = 0; mi < members.length; mi++) {
+                var member = members[mi];
+                var memberPrompt = prompt;
+                if (perMemberPrompts) {
+                    var found = null;
+                    for (var pi = 0; pi < perMemberPrompts.length; pi++) {
+                        if (perMemberPrompts[pi].member.id === member.id) { found = perMemberPrompts[pi]; break; }
+                    }
+                    if (found) memberPrompt = found.prompt;
+                }
+                var typingTxt = typingEl ? typingEl.querySelector('.typing-txt') : null;
+                if (typingTxt) typingTxt.textContent = member.name + '在输入…';
+                try {
+                    var freshChat = getChat(chatId);
+                    var worldPart = freshChat.worldBook ? '【世界书】\n' + freshChat.worldBook + '\n\n' : '';
+                    var otherNames = members.filter(function(x){return x.id!==member.id;}).map(function(x){return x.name;}).join('、');
+                    var sys = worldPart + '你在一个群聊中，你的名字是"' + member.name + '"。群里还有：' + otherNames + '。\n【你的角色设定】\n' + (member.systemPrompt || '你是一个友善的AI角色。') + '\n\n【严格规则】\n1. 只说自己的话，不替他人发言\n2. 不加名字前缀\n3. 只回复一句话，简短自然';
+                    var result = await doStream(member.model, sys, [{role:'user', content:memberPrompt}], null, 0.8);
+                    var replyText = (result.text || '').replace(/^\[?[^\]]{1,10}\]?\s*[:：]\s*/, '').trim();
+                    if (!replyText) continue;
+                    var cost = calcCost(result.tIn, result.tOut, member.model);
+                    var rid = genId();
+                    var replyMsg = {role:'assistant', content:replyText, senderName:member.name, senderEmoji:member.emoji||'', senderAvatarImg:member.avatarImg||'', memberId:member.id, ts:Date.now(), id:rid, cost:cost};
+                    updChat(chatId, function(c){ c.messages.push(replyMsg); c.lastMessage='['+member.name+']: '+replyText.slice(0,40); c.lastTime=Date.now(); c.totalCost=(c.totalCost||0)+cost; });
+                    if (typingEl) typingEl.classList.remove('show');
+                    renderMsg('convo', replyMsg, (getChat(chatId)||{messages:[]}).messages.length - 1);
+                    refreshCostBadge();
+                    document.getElementById('convo-msgs').scrollTop = 99999;
+                    if (mi < members.length - 1) await new Promise(function(r){setTimeout(r, 500);});
+                } catch(e) {
+                    if (typingEl) typingEl.classList.remove('show');
+                    console.error('group special error', e);
+                }
+            }
+            var t2 = typingEl ? typingEl.querySelector('.typing-txt') : null;
+            if (t2) t2.textContent = '思考中…';
+            if (typingEl) typingEl.classList.remove('show');
+            isCnvSending = false; updateSend('convo');
+        })();
+        return;
+    }
+    // 普通私聊原逻辑
     var tempMsgs = chat.messages.slice();
     tempMsgs.push({ role: 'user', content: prompt });
     var tempChat = {};
@@ -3676,7 +4162,6 @@ function sendSpecialToAI(chatId, prompt) {
                 c.lastMessage = txt.slice(0, 45);
                 c.lastTime = Date.now();
             });
-            // 重新读出来渲染
             var fresh = getChat(chatId);
             if (fresh) renderMsg('convo', fresh.messages[fresh.messages.length - 1], fresh.messages.length - 1);
         }
@@ -3816,6 +4301,45 @@ if (document.readyState === 'loading') {
       <button onclick="savePetSettings()" style="flex:1;padding:11px;border-radius:12px;border:none;background:#1a1a1a;color:#fff;font-size:13px;font-weight:600;cursor:pointer">保存</button>
     </div>
     <div id="meme-status" style="font-size:11px;color:#999;text-align:center;margin-top:8px;min-height:16px"></div>
+  </div>
+</div>
+<!-- 新建群聊 Modal -->
+<div id="mod-newgroup" class="modal-ov gone" onclick="if(event.target===this)closeModal('mod-newgroup')">
+  <div class="modal-sheet">
+    <div class="mtitle">👥 新建群聊</div>
+    <button class="mclose" onclick="closeModal('mod-newgroup')">✕</button>
+    <span class="mflbl">群名</span>
+    <input id="gc-name" class="mfinp" placeholder="如：三兄弟の日常">
+    <span class="mflbl">世界书（共同背景）</span>
+    <textarea id="gc-world" class="mfinp" rows="4" placeholder="所有角色共同知道的背景：我们是发小，在同一个城市长大…" style="resize:none;min-height:80px;margin-top:4px"></textarea>
+    <span class="mflbl">你的身份（可选）</span>
+    <input id="gc-identity" class="mfinp" placeholder="如：我是唐僧、我是三人的大哥、我是神秘旅人…">
+    <span class="mflbl">成员（最多5个角色）</span>
+    <div id="gc-members-list" style="margin-top:6px"></div>
+    <button onclick="gcAddMember()" style="width:100%;padding:10px;border-radius:10px;border:1.5px dashed var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;margin-top:8px">＋ 添加成员</button>
+    <button class="mbtn" onclick="createGroupChat()">创建群聊</button>
+  </div>
+</div>
+<!-- 群聊成员编辑 Modal -->
+<div id="mod-gcmember" class="modal-ov gone" onclick="if(event.target===this)closeModal('mod-gcmember')">
+  <div class="modal-sheet">
+    <div class="mtitle" id="gcm-title">编辑成员</div>
+    <button class="mclose" onclick="closeModal('mod-gcmember')">✕</button>
+    <span class="mflbl">头像</span>
+    <div class="avatar-upload-row" style="margin-bottom:8px">
+      <div class="avatar-preview" id="gcm-avatar-preview" onclick="document.getElementById('gcm-avatar-input').click()" style="cursor:pointer">🤖</div>
+      <div style="flex:1;font-size:12px;color:#999">点击上传图片<br>或用下方emoji</div>
+      <input type="file" id="gcm-avatar-input" accept="image/*" style="display:none" onchange="onGcmAvatarUpload(event)">
+    </div>
+    <div class="emoji-grid" id="gcm-emoji-grid" style="margin-bottom:8px"></div>
+    <span class="mflbl">名字</span>
+    <input id="gcm-name" class="mfinp" placeholder="角色名">
+    <span class="mflbl">模型</span>
+    <div id="gcm-brands" class="mchip-row" style="margin-top:4px"></div>
+    <select id="gcm-model" class="mfinp" style="margin-top:8px"></select>
+    <span class="mflbl">角色设定（System Prompt）</span>
+    <textarea id="gcm-sys" class="mfinp" rows="4" placeholder="这个角色的性格、说话方式、和你的关系…" style="resize:none;min-height:80px;margin-top:4px"></textarea>
+    <button class="mbtn" onclick="saveGcMember()">保存</button>
   </div>
 </div>
 <!-- 红包查看弹窗 -->
