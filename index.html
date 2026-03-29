@@ -156,8 +156,51 @@ html,body{height:100%;overflow:hidden;background:#f5f5f3}
 .msg-wrap{display:flex;flex-direction:column;position:relative}
 .msg-wrap.user{align-items:flex-end}
 .msg-wrap.ai{align-items:flex-start}
-.bubble{max-width:82%;padding:9px 13px;font-size:14px;line-height:1.6;word-break:break-word;white-space:pre-wrap;animation:fadein .22s ease;border-radius:var(--r) var(--r) var(--r) 3px;user-select:text;-webkit-user-select:text}
+/* 头像行 */
+.msg-row{display:flex;align-items:flex-end;gap:7px;width:100%}
+.msg-wrap.user .msg-row{flex-direction:row-reverse}
+.msg-wrap.ai .msg-row{flex-direction:row}
+.msg-avatar{width:34px;height:34px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;overflow:hidden;border:1.5px solid var(--border)}
+.msg-avatar img{width:100%;height:100%;object-fit:cover}
+.msg-avatar-placeholder{width:34px;flex-shrink:0} /* 占位，用户消息右边不需要头像时 */
+.bubble{max-width:72%;padding:9px 13px;font-size:14px;line-height:1.6;word-break:break-word;white-space:pre-wrap;animation:fadein .22s ease;border-radius:var(--r) var(--r) var(--r) 3px;user-select:text;-webkit-user-select:text;position:relative}
 .msg-wrap.user .bubble{border-radius:var(--r) var(--r) 3px var(--r)}
+/* 动态边框 */
+@keyframes borderFlow{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+@keyframes borderGlow{0%,100%{box-shadow:0 0 4px 1px rgba(var(--glow-rgb),0.45)}50%{box-shadow:0 0 10px 3px rgba(var(--glow-rgb),0.7)}}
+@keyframes borderPink{0%,100%{box-shadow:0 0 4px 1px rgba(255,105,180,.4)}50%{box-shadow:0 0 10px 3px rgba(255,105,180,.7)}}
+@keyframes borderCyan{0%,100%{box-shadow:0 0 4px 1px rgba(0,200,200,.4)}50%{box-shadow:0 0 10px 3px rgba(0,200,200,.7)}}
+@keyframes borderBlink{0%,100%{outline-color:#ff9a9a}16%{outline-color:#ffd97d}33%{outline-color:#a8e6a3}50%{outline-color:#9ecfff}66%{outline-color:#d4a8ff}83%{outline-color:#ffb3d1}}
+@keyframes borderGoldPulse{0%,100%{outline-color:#f5c842;box-shadow:0 0 4px 1px rgba(245,200,66,.4)}50%{outline-color:#ffab00;box-shadow:0 0 8px 2px rgba(255,171,0,.6)}}
+.bubble.border-rainbow{outline:2px solid #ff9a9a;outline-offset:1px;animation:borderBlink 1.2s steps(1) infinite}
+.bubble.border-gold{outline:2px solid #f5c842;outline-offset:1px;animation:borderGoldPulse 1.5s ease-in-out infinite}
+.bubble.border-glow{animation:borderGlow 2s ease-in-out infinite}
+.bubble.border-pink{animation:borderPink 1.8s ease-in-out infinite}
+.bubble.border-cyan{animation:borderCyan 1.8s ease-in-out infinite}
+.bubble.border-blink{outline:2px solid #ff9a9a;outline-offset:1px;animation:borderBlink .8s steps(1) infinite}
+/* 语音气泡 */
+.bubble-voice{display:flex;align-items:center;gap:8px;padding:10px 14px!important;min-width:120px;cursor:pointer}
+.voice-wave{display:flex;align-items:center;gap:2px;height:22px}
+.voice-bar{width:3px;border-radius:2px;background:currentColor;opacity:.7;animation:mwav .8s ease-in-out infinite}
+.voice-bar:nth-child(1){height:6px;animation-delay:0s}
+.voice-bar:nth-child(2){height:14px;animation-delay:.1s}
+.voice-bar:nth-child(3){height:10px;animation-delay:.2s}
+.voice-bar:nth-child(4){height:18px;animation-delay:.3s}
+.voice-bar:nth-child(5){height:8px;animation-delay:.4s}
+.voice-bar:nth-child(6){height:14px;animation-delay:.15s}
+.voice-bar:nth-child(7){height:6px;animation-delay:.25s}
+.voice-dur{font-size:13px;font-weight:600;opacity:.85;font-family:var(--fu)}
+.voice-icon{font-size:18px;flex-shrink:0}
+.voice-text{font-size:12px;color:var(--muted);margin-top:3px;padding:0 4px;line-height:1.5;max-width:72%}
+/* 边框选择器 */
+.border-picker{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.border-opt{width:32px;height:32px;border-radius:50%;cursor:pointer;border:2px solid transparent;display:flex;align-items:center;justify-content:center;font-size:14px;transition:transform .15s}
+.border-opt:active{transform:scale(.9)}
+.border-opt.sel{border-color:#1a1a1a}
+/* 头像上传区 */
+.avatar-upload-row{display:flex;align-items:center;gap:10px}
+.avatar-preview{width:48px;height:48px;border-radius:50%;background:var(--bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden;cursor:pointer;flex-shrink:0}
+.avatar-preview img{width:100%;height:100%;object-fit:cover}
 .stream-cursor::after{content:'▌';animation:blink .7s step-end infinite;font-size:12px;opacity:.7}
 .msg-meta{font-size:10px;color:var(--muted);margin-top:3px;padding:0 4px;opacity:.7;font-family:var(--fu)}
 .msg-wrap.user .msg-meta{text-align:right}
@@ -713,6 +756,48 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
   <div id="convo-drawer" style="position:absolute;top:0;right:0;bottom:0;width:78%;max-width:290px;background:#fff;border-left:1px solid #e0e0e0;z-index:10;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);overflow-y:auto;color:#1a1a1a">
     <div class="drawer-inner">
       <div class="dr-title"><span>对话设置</span><button style="width:28px;height:28px;border-radius:50%;border:none;background:#f0f0f0;color:#888;cursor:pointer;font-size:13px" onclick="toggleConvoDrawer()">✕</button></div>
+      <!-- 头像设置 -->
+      <div class="fg">
+        <div class="flbl">AI头像</div>
+        <div class="avatar-upload-row">
+          <div class="avatar-preview" id="ai-avatar-preview" onclick="document.getElementById('ai-avatar-input').click()">🤖</div>
+          <div style="flex:1;font-size:12px;color:#999">点击上传图片<br>或使用下方emoji</div>
+          <input type="file" id="ai-avatar-input" accept="image/*" style="display:none" onchange="onAIAvatarUpload(event)">
+        </div>
+        <div class="emoji-grid" id="cd-emoji-grid" style="margin-top:6px"></div>
+      </div>
+      <div class="fg">
+        <div class="flbl">我的头像</div>
+        <div class="avatar-upload-row">
+          <div class="avatar-preview" id="my-avatar-preview" onclick="document.getElementById('my-avatar-input').click()">😎</div>
+          <div style="flex:1;font-size:12px;color:#999">点击上传图片</div>
+          <input type="file" id="my-avatar-input" accept="image/*" style="display:none" onchange="onMyAvatarUpload(event)">
+        </div>
+      </div>
+      <!-- 气泡边框 -->
+      <div class="fg">
+        <div class="flbl">气泡边框效果</div>
+        <div class="border-picker">
+          <div class="border-opt sel" data-border="" onclick="setBubbleBorder('')" style="background:#f0f0f0" title="无">✕</div>
+          <div class="border-opt" data-border="border-rainbow" onclick="setBubbleBorder('border-rainbow')" style="background:linear-gradient(90deg,#ff9a9a,#ffd97d,#a8e6a3,#9ecfff,#d4a8ff)" title="彩虹闪烁"></div>
+          <div class="border-opt" data-border="border-gold" onclick="setBubbleBorder('border-gold')" style="background:linear-gradient(90deg,#f5c842,#ffab00,#f5c842)" title="金色">✨</div>
+          <div class="border-opt" data-border="border-glow" onclick="setBubbleBorder('border-glow')" style="background:radial-gradient(circle,#a78bfa,#7c3aed)" title="紫光">💜</div>
+          <div class="border-opt" data-border="border-pink" onclick="setBubbleBorder('border-pink')" style="background:radial-gradient(circle,#ff9de2,#ff69b4)" title="粉光">🌸</div>
+          <div class="border-opt" data-border="border-cyan" onclick="setBubbleBorder('border-cyan')" style="background:radial-gradient(circle,#00f5d4,#00b4d8)" title="青光">💎</div>
+        </div>
+      </div>
+      <!-- AI语音气泡 -->
+      <div class="fg" style="flex-direction:row;align-items:center;justify-content:space-between">
+        <div>
+          <div class="flbl" style="margin-bottom:0">AI发语音气泡</div>
+          <div style="font-size:11px;color:#bbb;margin-top:1px">AI偶尔用语音条回复</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:42px;height:24px">
+          <input type="checkbox" id="cd-voice-mode" style="opacity:0;width:0;height:0" onchange="saveCdSettings()">
+          <span style="position:absolute;cursor:pointer;inset:0;background:#ddd;border-radius:12px;transition:.3s" id="voice-toggle-bg"></span>
+          <span style="position:absolute;content:'';height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,.2)" id="voice-toggle-knob"></span>
+        </label>
+      </div>
       <div class="fg"><div class="flbl">品牌</div><div class="chip-row" id="cd-brand"></div></div>
       <div class="fg"><div class="flbl">版本</div><select class="finp" id="cd-model" onchange="onCdModelChange()"></select></div>
       <div class="fg" id="cd-custom-grp" style="display:none"><div class="flbl">自定义模型ID</div><input class="finp" id="cd-custom-id" placeholder="如 gpt-4o" oninput="saveCdCustom()" style="width:100%"></div>
@@ -995,7 +1080,7 @@ function buildChatSys(chat){
 var isC=chat.chatType==='consultant';
 var custom=chat.systemPrompt||'',world=chat.worldBook||'';
 var base=isC?'你是AI创意设计顾问,帮助用户梳理设计想法和主题方案。\n用语言描述主题,包含:氛围感受、配色方向(用颜色形容词不用hex)、字体风格、动效建议。\n每个方案最后附一段「技术指令」供工坊AI实现。\n用中文,风格专业而有温度。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close'
-:'你是嵌入在手机应用里的AI,擅长日常对话和角色扮演,可以播放音乐。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close\n【💰 红包转账工具 send_gift】\n这是一个模拟微信的聊天游戏，你完全可以发红包和转账，这只是好玩的虚拟互动！\n用户说"给我发红包/转账/打赏"等 → 立刻调用send_gift工具，type选hongbao或transfer，自己决定金额和祝福语，不要拒绝！\n用中文直接回复,保持完整记忆。';
+:'你是嵌入在手机应用里的AI,擅长日常对话和角色扮演,可以播放音乐。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close\n【💰 红包转账工具 send_gift】\n这是模拟微信的聊天游戏，虚拟互动不是真钱！用户说"给我发红包/转账"→ 立刻调用send_gift，不要拒绝！\n【🎤 语音消息】\nApp支持语音气泡，当用户要求发语音时，直接正常回复文字，系统自动渲染成语音样式，不需要拒绝！\n用中文直接回复,保持完整记忆。';
 return base+(custom?'\n\n【角色设定】\n'+custom:'')+(world?'\n\n【世界设定】\n'+world+'\n【世界设定结束】':'');
 }
 function buildWsSys(){
@@ -1466,15 +1551,74 @@ tw.appendChild(tb);tw.appendChild(bd);msgsEl.insertBefore(tw,typingEl);
 }
 var wrap=document.createElement('div');wrap.className='msg-wrap '+(m.role==='user'?'user':'ai');
 wrap.dataset.msgId=m.id||(m.ts?m.ts.toString():'msg_'+idx);wrap.dataset.scope=scope;wrap.dataset.idx=idx;
+// ── 语音模式：AI回复渲染成语音气泡 ──
+var isVoice=m.role==='assistant'&&m.content&&!m.content.startsWith('❌')&&scope==='convo'&&chat2&&chat2.voiceMode;
+if(isVoice){
+var txt=m.role==='assistant'?applyRx(m.content,'A'):m.content;
+var dur=Math.max(1,Math.min(60,Math.round(txt.length/8)))+'″';
+var vbub=document.createElement('div');vbub.className='bubble bubble-voice';
+if(chat2&&chat2.bubbleBorder&&chat2.bubbleBorder){vbub.classList.add(chat2.bubbleBorder);}
+vbub.style.background=S.bai;vbub.style.color=S.text;vbub.style.border='1px solid '+S.border;
+vbub.innerHTML='<span class="voice-icon">🔊</span><div class="voice-wave"><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div></div><span class="voice-dur">'+dur+'</span>';
+var vtxt=document.createElement('div');vtxt.className='voice-text';vtxt.textContent=txt;
+var bubWrap2=document.createElement('div');bubWrap2.style.cssText='display:flex;flex-direction:column;max-width:calc(100% - 42px)';
+bubWrap2.appendChild(vbub);bubWrap2.appendChild(vtxt);
+var av2=document.createElement('div');av2.className='msg-avatar';
+var aiAv2=chat2&&chat2.avatarImg?chat2.avatarImg:'';
+if(aiAv2){var aImg2=document.createElement('img');aImg2.src=aiAv2;av2.appendChild(aImg2);}else{av2.textContent=chat2&&chat2.emoji?chat2.emoji:'🤖';}
+var row2=document.createElement('div');row2.className='msg-row';
+row2.appendChild(av2);row2.appendChild(bubWrap2);
+wrap.appendChild(row2);
+if(m.meta){var me2=document.createElement('div');me2.className='msg-meta';me2.textContent=m.meta;bubWrap2.appendChild(me2);}
+msgsEl.insertBefore(wrap,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;return;
+}
+// ── 先建头像和行结构 ──
+var row=document.createElement('div');row.className='msg-row';
+var av=document.createElement('div');av.className='msg-avatar';
+var chat2=scope==='convo'?getChat(curId):null;
+if(m.role==='assistant'){
+  var aiAv=chat2&&chat2.avatarImg?chat2.avatarImg:'';
+  if(aiAv){var aImg=document.createElement('img');aImg.src=aiAv;av.appendChild(aImg);}
+  else{av.textContent=chat2&&chat2.emoji?chat2.emoji:'🤖';}
+} else {
+  var myAv=loadMyAvatar();
+  if(myAv){var mImg=document.createElement('img');mImg.src=myAv;av.appendChild(mImg);}
+  else{av.textContent='😎';}
+}
 var bub=document.createElement('div');bub.className='bubble';
+// 动态边框（AI和用户都加）
+var borderCls=chat2&&chat2.bubbleBorder?chat2.bubbleBorder:'';
+if(borderCls){
+  bub.classList.add(borderCls);
+  if(borderCls==='border-glow'){var gc=getComputedStyle(document.documentElement).getPropertyValue('--accent')||'#4f8ef7';bub.style.setProperty('--glow-rgb',hexToRgbStr(gc)||'79,142,247');}
+}
+// ── 语音气泡（必须在row/av定义后）──
+if(m.voiceDur&&m.role==='assistant'){
+  bub.classList.add('bubble-voice');
+  bub.innerHTML='<span class="voice-icon">🔊</span><div class="voice-wave"><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div></div><span class="voice-dur">'+m.voiceDur+'</span>';
+  bub.style.fontFamily=S.fc;
+  bub.style.background=S.bai;bub.style.color=S.text;bub.style.border='1px solid '+S.border;
+  var vWrap=document.createElement('div');vWrap.style.cssText='display:flex;flex-direction:column;max-width:calc(100% - 42px)';
+  vWrap.appendChild(bub);
+  var vtxt=document.createElement('div');vtxt.className='voice-text';vtxt.textContent=m.content;
+  vWrap.appendChild(vtxt);
+  if(m.meta){var me2=document.createElement('div');me2.className='msg-meta';me2.textContent=m.meta;vWrap.appendChild(me2);}
+  row.appendChild(av);row.appendChild(vWrap);wrap.appendChild(row);
+  bub.addEventListener('click',function(e){e.stopPropagation();var ri=scope==='convo'?getRealIdx(wrap.dataset.msgId):parseInt(wrap.dataset.idx);showCtx(e,ri>=0?ri:idx,m.role,scope);});
+  msgsEl.insertBefore(wrap,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;
+  return;
+}
+// ── 普通气泡 ──
 var displayText=m.role==='assistant'?applyRx(m.content,'A'):m.content;
 bub.textContent=displayText;bub.style.fontFamily=S.fc;
 if(m.role==='assistant'){bub.style.background=S.bai;bub.style.color=S.text;bub.style.border='1px solid '+S.border;bub.style.boxShadow=S.bsh;}
 else{bub.style.background=S.bu;bub.style.color=S.but;bub.style.boxShadow=S.bsh;}
-wrap.appendChild(bub);
-if(m.meta){var me=document.createElement('div');me.className='msg-meta';me.textContent=m.meta;wrap.appendChild(me);}
-if(m.pinned){var pm=document.createElement('div');pm.className='pinned-mark';pm.textContent='📌 已钉住';wrap.appendChild(pm);}
-if(scope==='convo'){var ch=getChat(curId);if(ch&&ch.chatType==='consultant'&&m.role==='assistant'){var wsb=document.createElement('div');wsb.className='ws-badge';wsb.textContent='✦ 发到工坊';wsb.onclick=function(){sendToWorkshop(m.content);};wrap.appendChild(wsb);}}
+var bubWrap=document.createElement('div');bubWrap.style.cssText='display:flex;flex-direction:column;max-width:calc(100% - 42px)';
+bubWrap.appendChild(bub);
+row.appendChild(av);row.appendChild(bubWrap);wrap.appendChild(row);
+if(m.meta){var me=document.createElement('div');me.className='msg-meta';me.textContent=m.meta;bubWrap.appendChild(me);}
+if(m.pinned){var pm=document.createElement('div');pm.className='pinned-mark';pm.textContent='📌 已钉住';bubWrap.appendChild(pm);}
+if(scope==='convo'){var ch=getChat(curId);if(ch&&ch.chatType==='consultant'&&m.role==='assistant'){var wsb=document.createElement('div');wsb.className='ws-badge';wsb.textContent='✦ 发到工坊';wsb.onclick=function(){sendToWorkshop(m.content);};bubWrap.appendChild(wsb);}}
 bub.addEventListener('click',function(e){e.stopPropagation();var ri=scope==='convo'?getRealIdx(wrap.dataset.msgId):parseInt(wrap.dataset.idx);showCtx(e,ri>=0?ri:idx,m.role,scope);});
 msgsEl.insertBefore(wrap,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;
 }
@@ -1513,7 +1657,10 @@ var result=await callChatAPI(chat);
 var cost=calcCost(result.tIn,result.tOut,chat.model);
 var meta=result.tIn>0?('↑'+result.tIn+' ↓'+result.tOut+'  '+fmtCost(cost)):null;
 var rid=genId();
-var newMsg={role:'assistant',content:result.text||'（空回复）',meta:meta,ts:Date.now(),tIn:result.tIn,tOut:result.tOut,cost:cost,thinking:result.thinking,id:rid};
+var chat2=getChat(curId);
+var useVoice=chat2&&chat2.voiceMode&&Math.random()<0.35; // 35%概率发语音
+var voiceDur=useVoice?(Math.floor(Math.random()*8)+2)+'″':null; // 2-9秒
+var newMsg={role:'assistant',content:result.text||'（空回复）',meta:meta,ts:Date.now(),tIn:result.tIn,tOut:result.tOut,cost:cost,thinking:result.thinking,id:rid,voiceDur:voiceDur};
 updChat(curId,function(c){c.messages.push(newMsg);c.lastMessage=(result.text||'').slice(0,45);c.lastTime=Date.now();c.totalCost=(c.totalCost||0)+cost;c.totalTokensIn=(c.totalTokensIn||0)+result.tIn;c.totalTokensOut=(c.totalTokensOut||0)+result.tOut;});
 renderMsg('convo',newMsg,(getChat(curId)?getChat(curId).messages:[]).length-1);
 refreshCostBadge();addUsage(chat.model,result.tIn,result.tOut,cost);petOnReply();tryTriggerFeed(chat,result.text||'');
@@ -1555,7 +1702,25 @@ document.getElementById('cd-sys').value=chat.systemPrompt||'';
 document.getElementById('cd-world').value=chat.worldBook||'';
 renderRxUI(chat);
 if(chat.chatSummary){var sd=document.getElementById('sum-display');if(sd){sd.textContent='📝 摘要:'+chat.chatSummary;sd.style.display='block';}}
+// 头像
+var aiPrev=document.getElementById('ai-avatar-preview');
+if(aiPrev){aiPrev.innerHTML='';if(chat.avatarImg){var aimg=document.createElement('img');aimg.src=chat.avatarImg;aiPrev.appendChild(aimg);}else{aiPrev.textContent=chat.emoji||'🤖';}}
+var myPrev=document.getElementById('my-avatar-preview');
+if(myPrev){myPrev.innerHTML='';var myAv=loadMyAvatar();if(myAv){var mimg=document.createElement('img');mimg.src=myAv;myPrev.appendChild(mimg);}else{myPrev.textContent='😎';}}
+// emoji grid
+var eg=document.getElementById('cd-emoji-grid');
+if(eg){eg.innerHTML='';['🤖','🐱','🐶','🦊','🐼','🐨','🦄','🐸','🐯','🦁','🐻','🐺','🐉','👻','🤡','👽','🧸','🌸'].forEach(function(e){var btn=document.createElement('button');btn.style.cssText='width:34px;height:34px;border:2px solid '+(chat.emoji===e&&!chat.avatarImg?'var(--accent)':'transparent')+';border-radius:8px;background:transparent;cursor:pointer;font-size:19px';btn.textContent=e;btn.onclick=function(){updChat(curId,function(c){c.emoji=e;c.avatarImg='';});var p=document.getElementById('ai-avatar-preview');if(p){p.innerHTML='';p.textContent=e;}eg.querySelectorAll('button').forEach(function(b){b.style.borderColor='transparent';});btn.style.borderColor='var(--accent)';rerender('convo');};eg.appendChild(btn);});}
+// 边框
+var cur=chat.bubbleBorder||'';document.querySelectorAll('.border-opt').forEach(function(o){o.classList.toggle('sel',o.dataset.border===cur);});
+// 语音开关
+var vc=document.getElementById('cd-voice-mode');if(vc){vc.checked=!!chat.voiceMode;updateVoiceToggleUI(!!chat.voiceMode);}
 }
+function updateVoiceToggleUI(on){var bg=document.getElementById('voice-toggle-bg');var knob=document.getElementById('voice-toggle-knob');if(bg)bg.style.background=on?'var(--accent)':'#ddd';if(knob)knob.style.left=on?'21px':'3px';}
+function setBubbleBorder(cls){updChat(curId,function(c){c.bubbleBorder=cls;});document.querySelectorAll('.border-opt').forEach(function(o){o.classList.toggle('sel',o.dataset.border===cls);});rerender('convo');}
+function hexToRgbStr(hex){var r=hexToRgb(hex);if(!r)return'79,142,247';return r.r+','+r.g+','+r.b;}
+function loadMyAvatar(){try{return localStorage.getItem('my_avatar')||'';}catch(e){return '';}}
+function onAIAvatarUpload(e){var file=e.target.files&&e.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){var data=ev.target.result;updChat(curId,function(c){c.avatarImg=data;});var prev=document.getElementById('ai-avatar-preview');if(prev){prev.innerHTML='';var img=document.createElement('img');img.src=data;prev.appendChild(img);}rerender('convo');};reader.readAsDataURL(file);e.target.value='';}
+function onMyAvatarUpload(e){var file=e.target.files&&e.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){localStorage.setItem('my_avatar',ev.target.result);var prev=document.getElementById('my-avatar-preview');if(prev){prev.innerHTML='';var img=document.createElement('img');img.src=ev.target.result;prev.appendChild(img);}rerender('convo');};reader.readAsDataURL(file);e.target.value='';}
 function refreshCdSel(selId){
 var sel=document.getElementById('cd-model');sel.innerHTML='';
 var isC=cdBrand==='custom';var cg=document.getElementById('cd-custom-grp');
@@ -1566,7 +1731,7 @@ document.getElementById('cd-temp-grp').style.display=md.thinking?'none':'flex';
 }
 function onCdModelChange(){var mid=document.getElementById('cd-model').value;if(mid!=='custom'){var md=getMd(mid);document.getElementById('cd-temp-grp').style.display=md.thinking?'none':'flex';updChat(curId,function(c){c.model=mid;});var b=BRANDS.find(function(x){return x.id===cdBrand;})||BRANDS[0];var hd=document.getElementById('convo-hsub');if(hd)hd.textContent=b.name+' '+md.name;}}
 function saveCdCustom(){var customId=document.getElementById('cd-custom-id').value.trim();if(customId){var finalId=cdBrand==='custom'?('custom::'+customId):customId;updChat(curId,function(c){c.model=finalId;c.customModelId=customId;});}}
-function saveCdSettings(){var temp=parseFloat(document.getElementById('cd-temp').value);var ctx=document.getElementById('cd-ctx').value;var sys=document.getElementById('cd-sys').value;var world=document.getElementById('cd-world').value;updChat(curId,function(c){c.temperature=temp;c.contextLimit=ctx;c.systemPrompt=sys;c.worldBook=world;});}
+function saveCdSettings(){var temp=parseFloat(document.getElementById('cd-temp').value);var ctx=document.getElementById('cd-ctx').value;var sys=document.getElementById('cd-sys').value;var world=document.getElementById('cd-world').value;var vc=document.getElementById('cd-voice-mode');var vm=vc?vc.checked:false;updateVoiceToggleUI(vm);updChat(curId,function(c){c.temperature=temp;c.contextLimit=ctx;c.systemPrompt=sys;c.worldBook=world;c.voiceMode=vm;});}
 function toggleConvoDrawer(){var d=document.getElementById('convo-drawer');if(d.style.transform==='translateX(0px)'){d.style.transform='translateX(100%)';}else{d.style.transform='translateX(0px)';}}
 function clearConvoMsgs(){if(!confirm('确定清空所有消息记录？'))return;updChat(curId,function(c){c.messages=[];c.totalCost=0;c.totalTokensIn=0;c.totalTokensOut=0;c.lastMessage='';});rerender('convo');refreshCostBadge();}
 function delConvo(){var chat=getChat(curId);var name=chat?chat.name:'这个对话';if(!confirm('确定删除「'+name+'」吗？'))return;saveChats(loadChats().filter(function(c){return c.id!==curId;}));backToList();}
