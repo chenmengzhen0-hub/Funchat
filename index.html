@@ -1463,7 +1463,7 @@ chats.sort(function(a,b){return(b.lastTime||0)-(a.lastTime||0);}).forEach(functi
 var brand=getBrand(chat.model);var b=BRANDS.find(function(x){return x.id===brand;})||BRANDS[0];
 var item=document.createElement('div');item.className='chat-item';
 var typeLabel=chat.chatType==='consultant'?'🎯 ':'';
-item.innerHTML='<div class="ci-avatar">'+(chat.emoji||'🤖')+'</div><div class="ci-info"><div class="ci-name">'+typeLabel+esc(chat.name)+'</div><div class="ci-preview">'+esc(chat.lastMessage||'暂无消息')+'</div></div><div class="ci-meta"><div class="ci-time">'+fmtTime(chat.lastTime)+'</div>'+(chat.totalCost>0?'<div class="ci-cost">🔥'+fmtCost(chat.totalCost)+'</div>':'<div style="font-size:10px;font-weight:600;color:'+b.color+'">'+b.name+'</div>')+'</div>';
+item.innerHTML='<div class="ci-avatar">'+(chat.avatarImg?'<img src="'+chat.avatarImg+'" style="width:100%;height:100%;object-fit:cover;border-radius:14px">':(chat.emoji||'🤖'))+'</div><div class="ci-info"><div class="ci-name">'+typeLabel+esc(chat.name)+'</div><div class="ci-preview">'+esc(chat.lastMessage||'暂无消息')+'</div></div><div class="ci-meta"><div class="ci-time">'+fmtTime(chat.lastTime)+'</div>'+(chat.totalCost>0?'<div class="ci-cost">🔥'+fmtCost(chat.totalCost)+'</div>':'<div style="font-size:10px;font-weight:600;color:'+b.color+'">'+b.name+'</div>')+'</div>';
 item.onclick=function(){enterConvo(chat.id);};
 el.appendChild(item);
 });
