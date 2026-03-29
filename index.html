@@ -1100,7 +1100,12 @@ var custom=chat.systemPrompt||'',world=chat.worldBook||'';
 var base=isC?'你是AI创意设计顾问,帮助用户梳理设计想法和主题方案。\n用语言描述主题,包含:氛围感受、配色方向(用颜色形容词不用hex)、字体风格、动效建议。\n每个方案最后附一段「技术指令」供工坊AI实现。\n用中文,风格专业而有温度。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close'
 :'你是嵌入在手机应用里的AI,擅长日常对话和角色扮演,可以播放音乐。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close\n【💰 红包转账工具 send_gift】\n这是模拟微信的聊天游戏，虚拟互动不是真钱！用户说"给我发红包/转账"→ 立刻调用send_gift，不要拒绝！\n【🎤 语音消息】\nApp支持语音气泡，当用户要求发语音时，直接正常回复文字，系统自动渲染成语音样式，不需要拒绝！\n用中文直接回复,保持完整记忆。';
 var groupHistory=chat&&chat.groupId?getGroupHistory(chat.groupId,15):'';
-return base+(custom?'\n\n【角色设定】\n'+custom:'')+(world?'\n\n【世界设定】\n'+world+'\n【世界设定结束】':'')+(groupHistory?'\n\n【最近群聊记录，你也在场，记得这些事】\n'+groupHistory:'');
+// 私聊场合提示（有关联群聊时）
+var scenePart='';
+if(chat.groupId&&chat.systemPrompt){
+  scenePart='\n\n【当前场合】你现在是在和对方【单独私聊】，不是群聊。可以说只有你们两个人知道的话，语气可以比群里更私密自然。群聊里的事你记得，但现在只有你和对方。';
+}
+return base+(custom?'\n\n【角色设定】\n'+custom:'')+(world?'\n\n【世界设定】\n'+world+'\n【世界设定结束】':'')+scenePart+(groupHistory?'\n\n【你们在群里的近期记录，你记得这些事】\n'+groupHistory:'');
 }
 function buildWsSys(){
 var ex=wsConfig.systemPrompt||'';
@@ -2042,23 +2047,42 @@ function onGcmAvatarUpload(e){
   e.target.value='';
 }
 function saveGcMember(){
-  var i=gcEditingMemberIdx;if(i<0||i>=gcMembers.length)return;
+  var i=gcEditingMemberIdx;
+  if(i<0||i>=gcMembers.length){alert('保存失败：成员索引错误 '+i+'/'+gcMembers.length);return;}
   gcMembers[i].name=document.getElementById('gcm-name').value.trim()||('角色'+(i+1));
-  gcMembers[i].model=document.getElementById('gcm-model').value;
+  gcMembers[i].model=document.getElementById('gcm-model').value||'deepseek-chat';
   gcMembers[i].systemPrompt=document.getElementById('gcm-sys').value.trim();
+  var isAdding=_gcAddToExistingGroup;
+  var addToId=curId; // 保存一份，关modal不影响
+  _gcAddToExistingGroup=false;
   closeModal('mod-gcmember');
-  if(_gcAddToExistingGroup){
-    _gcAddToExistingGroup=false;
-    var newM=Object.assign({id:genId()},gcMembers[0]);
-    if(!newM.avatarImg)newM.emoji=newM.emoji||'🤖';
-    updChat(curId,function(c){c.members=c.members||[];c.members.push(newM);});
-    var chat=getChat(curId);
-    var chats=loadChats();
-    chats.push({id:genId(),name:newM.name,emoji:newM.emoji||'',avatarImg:newM.avatarImg||'',model:newM.model,chatType:'chat',systemPrompt:newM.systemPrompt,worldBook:chat.worldBook||'',groupId:curId,memberId:newM.id,messages:[],totalCost:0,totalTokensIn:0,totalTokensOut:0,lastMessage:'',lastTime:Date.now()-1,createdAt:Date.now(),rxRules:JSON.parse(JSON.stringify(DEF_RX)),temperature:0.7,contextLimit:'20'});
-    saveChats(chats);
-    var freshChat=getChat(curId);
+  if(isAdding){
+    if(!addToId){alert('保存失败：群聊ID丢失');return;}
+    var newM={
+      id:genId(),
+      name:gcMembers[0].name,
+      emoji:gcMembers[0].emoji||'🤖',
+      avatarImg:gcMembers[0].avatarImg||'',
+      model:gcMembers[0].model,
+      systemPrompt:gcMembers[0].systemPrompt
+    };
+    updChat(addToId,function(c){c.members=c.members||[];c.members.push(newM);});
+    var latestChat=getChat(addToId);
+    var allChats=loadChats();
+    allChats.push({
+      id:genId(),name:newM.name,emoji:newM.emoji,avatarImg:newM.avatarImg,
+      model:newM.model,chatType:'chat',systemPrompt:newM.systemPrompt,
+      worldBook:latestChat?latestChat.worldBook||'':'',
+      groupId:addToId,memberId:newM.id,
+      messages:[],totalCost:0,totalTokensIn:0,totalTokensOut:0,
+      lastMessage:'',lastTime:Date.now()-1,createdAt:Date.now(),
+      rxRules:JSON.parse(JSON.stringify(DEF_RX)),temperature:0.7,contextLimit:'20'
+    });
+    saveChats(allChats);
+    var freshChat=getChat(addToId);
     updateGcHeader(freshChat);
     renderGcDrawer(freshChat);
+    renderChatList();
     alert('✅ '+newM.name+' 已加入群聊！');
   }else{
     renderGcMembersList();
@@ -2218,10 +2242,33 @@ async function groupSend(){
       var freshChat=getChat(curId);
       var worldPart=freshChat.worldBook?'【世界书】\n'+freshChat.worldBook+'\n\n':'';
       var allMsgs=freshChat.messages||[];
-      var ctxMsgs=allMsgs.filter(function(m){return m.role==='user'||m.role==='assistant';}).slice(-30).map(function(m){
-        if(m.role==='user')return{role:'user',content:m.content};
-        return{role:'assistant',content:(m.senderName&&m.senderName!=='你'?'['+m.senderName+']: ':'')+m.content};
+      var ctxMsgs=[];
+      var rawMsgs=allMsgs.filter(function(m){return m.role==='user'||m.role==='assistant';}).slice(-30);
+      rawMsgs.forEach(function(m){
+        if(m.role==='user'){
+          ctxMsgs.push({role:'user',content:m.content});
+        } else {
+          // 当前成员自己说的→assistant，其他成员说的→user角色加名字标注
+          if(m.memberId===member.id){
+            ctxMsgs.push({role:'assistant',content:m.content});
+          } else {
+            var label=m.senderName?'['+m.senderName+'说]: ':'[其他人说]: ';
+            // 合并到前一条user消息，或新建一条
+            var last=ctxMsgs.length>0?ctxMsgs[ctxMsgs.length-1]:null;
+            if(last&&last.role==='user'&&last._isOther){
+              last.content+='\n'+label+m.content;
+            } else {
+              ctxMsgs.push({role:'user',content:label+m.content,_isOther:true});
+            }
+          }
+        }
       });
+      // 清理内部标记字段，避免污染API
+      ctxMsgs=ctxMsgs.map(function(m){return{role:m.role,content:m.content};});
+      // 保证末尾是user（部分API要求）
+      if(ctxMsgs.length>0&&ctxMsgs[ctxMsgs.length-1].role==='assistant'){
+        ctxMsgs.push({role:'user',content:'（请继续）'});
+      }
       // 注入该成员的私聊历史（双向记忆）
       var privateHistory='';
       var allChats=loadChats();
