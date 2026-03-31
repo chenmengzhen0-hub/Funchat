@@ -1677,7 +1677,7 @@ wrap.dataset.msgId=m.id||(m.ts?m.ts.toString():'msg_'+idx);wrap.dataset.scope=sc
 // ── 先拿chat2，后续语音/头像判断都需要 ──
 var chat2=scope==='convo'?getChat(curId):null;
 // ── 语音模式：AI回复渲染成语音气泡 ──
-var isVoice=m.role==='assistant'&&m.content&&!m.content.startsWith('❌')&&scope==='convo'&&chat2&&chat2.voiceMode;
+var isVoice=m.role==='assistant'&&m.content&&!m.content.startsWith('❌')&&scope==='convo'&&chat2&&chat2.voiceMode&&!!m.voiceDur;
 if(isVoice){
 var txt=m.role==='assistant'?applyRx(m.content,'A'):m.content;
 var dur=Math.max(1,Math.min(60,Math.round(txt.length/8)))+'″';
