@@ -4041,21 +4041,31 @@ function onStickerUpload(e) {
     files.forEach(function(file) {
         var reader = new FileReader();
         reader.onload = function(ev) {
-            pending.push({ id: genId(), type: 'img', val: ev.target.result, desc: '' });
-            loaded++;
-            if (loaded === files.length) {
-                // 用内联弹窗逐张填描述
-                _descQueue = pending;
-                _descIdx = 0;
-                _descDone = function() {
-                    pending.forEach(function(s) { myTab.stickers.push(s); });
-                    saveStickerData();
-                    _stickerTab = '__my';
-                    renderStickerTabs();
-                    renderStickerGrid('__my');
-                };
-                showDescModal();
-            }
+            var img = new Image();
+            img.onload = function() {
+                var MAX = 200;
+                var w = img.width, h = img.height;
+                if (w > MAX || h > MAX) {
+                    var scale = MAX / Math.max(w, h);
+                    w = Math.round(w * scale); h = Math.round(h * scale);
+                }
+                var cv = document.createElement('canvas');
+                cv.width = w; cv.height = h;
+                cv.getContext('2d').drawImage(img, 0, 0, w, h);
+                var compressed = cv.toDataURL('image/jpeg', 0.7);
+                pending.push({ id: genId(), type: 'img', val: compressed, desc: '' });
+                loaded++;
+                if (loaded === files.length) {
+                    _descQueue = pending; _descIdx = 0;
+                    _descDone = function() {
+                        pending.forEach(function(s) { myTab.stickers.push(s); });
+                        saveStickerData(); _stickerTab = '__my';
+                        renderStickerTabs(); renderStickerGrid('__my');
+                    };
+                    showDescModal();
+                }
+            };
+            img.src = ev.target.result;
         };
         reader.readAsDataURL(file);
     });
