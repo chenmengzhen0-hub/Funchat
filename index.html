@@ -747,6 +747,7 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
     <button id="convo-back" onclick="backToList()">‹</button>
     <div style="flex:1;min-width:0"><div id="convo-hname">—</div><div id="convo-hsub" style="font-size:11px;color:var(--muted)">—</div></div>
     <div id="cost-badge" onclick="openCostDetail()">🔥 $0.000</div>
+    <button class="g-btn" title="主动发消息" onclick="triggerProactive(curId,'manual')" style="font-size:16px">💬</button>
     <button class="mctr" onclick="openMusicSearch()" style="font-size:18px;color:var(--muted)">🎵</button>
     <button class="g-btn" onclick="toggleConvoDrawer()">⋮</button>
   </div>
@@ -1572,10 +1573,21 @@ if(chat.themeParams)setTimeout(render,60);else render();
 document.getElementById('scr-convo').classList.add('open');
 document.getElementById('g-header').style.display='none';document.getElementById('tab-nav').style.display='none';
 setTimeout(function(){msgs.scrollTop=99999;},80);
+// 主动发消息：打开时30%概率触发（仅有历史消息时），否则启动空闲计时
+var _eid = id;
+setTimeout(function(){
+    var _ec = getChat(_eid);
+    if(_ec && (_ec.messages||[]).length > 0 && !isCnvSending && Math.random() < 0.3){
+        triggerProactive(_eid, 'open');
+    } else {
+        scheduleIdleProactive(_eid);
+    }
+}, 2000);
 }
 function backToList(){
 document.getElementById('chat-normal-area').style.display = 'flex';
 var cd=document.getElementById('convo-drawer');cd.style.transform='translateX(100%)';
+clearTimeout(_idleTimer);
 hideCtx();curId=null;editingMsgId=null;resetTheme();restoreGlobalTheme(); 
 document.getElementById('scr-convo').classList.remove('open');
 document.getElementById('g-header').style.display='';document.getElementById('tab-nav').style.display='';
@@ -1781,6 +1793,7 @@ var _gc=getChat(curId);if(_gc&&_gc.chatType==='group'){groupSend();return;}
 // 通话挂断检测
 if(checkHangup(text)){ta.value='';ta.style.height='auto';return;}
 ta.value='';ta.style.height='auto';isCnvSending=true;updateSend('convo');
+scheduleIdleProactive(curId);
 if(editingMsgId!=null){
 updChat(curId,function(c){var ri=c.messages.findIndex(function(m){return m.id===editingMsgId||(m.ts&&m.ts.toString()===editingMsgId);});if(ri>=0){c.messages[ri].content=text;c.messages=c.messages.slice(0,ri+1);}});
 editingMsgId=null;document.getElementById('edit-bar').classList.remove('show');rerender('convo');
@@ -1803,16 +1816,48 @@ var parts=rawText.split('｜｜').map(function(s){return s.trim();}).filter(Bool
 if(parts.length<2)parts=[rawText];
 for(var pi=0;pi<parts.length;pi++){
   var partText=parts[pi];
-  // 检测通话标记
+  // AI通话中说了挂断词 → 触发挂断
+  var curChatAI=getChat(curId);
+  if(curChatAI&&curChatAI._activeCall){
+    var aiHangupWords=['挂了','挂断','挂啦','挂掉','bye','拜拜','再见','88','886','先挂','不说了','走了','回头聊','晚点聊'];
+    var aiSaidHangup=aiHangupWords.some(function(w){return partText.indexOf(w)>=0;});
+    if(aiSaidHangup){
+      // 先渲染这条文字消息再挂断
+      var hrid=genId();
+      var hMsg={role:'assistant',content:partText,ts:Date.now(),id:hrid};
+      updChat(curId,function(c){c.messages.push(hMsg);c.lastMessage=partText.slice(0,45);c.lastTime=Date.now();});
+      renderMsg('convo',hMsg,(getChat(curId)?getChat(curId).messages:[]).length-1);
+      document.getElementById('convo-msgs').scrollTop=99999;
+      setTimeout(function(){checkHangupFromAI();},300);
+      continue;
+    }
+  }
+  // 检测通话标记（可能混在文字里）
   var callMatch=partText.match(/\[(语音通话|视频通话|未接语音|未接视频)\]/);
   if(callMatch){
+    // 通话中不再重复渲染来电气泡
+    var curChat2=getChat(curId);
+    if(curChat2&&curChat2._activeCall){continue;}
     var callKind=callMatch[1].indexOf('视频')>=0?'video':'voice';
     var callMissed=callMatch[1].indexOf('未接')>=0;
+    // 标记前后的文字单独渲染
+    var beforeCall=partText.replace(/\[(语音通话|视频通话|未接语音|未接视频)\]/,'').trim();
     var callMsg={role:'assistant',id:genId(),ts:Date.now(),content:partText,_callType:callKind,_callStatus:callMissed?'missed_in':'incoming'};
     updChat(curId,function(c){c.messages.push(callMsg);c.lastMessage=callMissed?'📵 未接来电':'📞 来电';c.lastTime=Date.now();});
     if(pi>0)await new Promise(function(r){setTimeout(r,400+Math.random()*300);});
-    if(parts.length>1&&pi<parts.length-1){document.getElementById('convo-typing').classList.add('show');document.getElementById('convo-msgs').scrollTop=99999;}
     renderMsg('convo',callMsg,(getChat(curId)?getChat(curId).messages:[]).length-1);
+    // 标记外的文字作为下一条消息
+    if(beforeCall){
+      await new Promise(function(r){setTimeout(r,400+Math.random()*300);});
+      document.getElementById('convo-typing').classList.add('show');
+      document.getElementById('convo-msgs').scrollTop=99999;
+      await new Promise(function(r){setTimeout(r,500+Math.random()*300);});
+      document.getElementById('convo-typing').classList.remove('show');
+      var btid=genId();
+      var btMsg={role:'assistant',content:beforeCall,ts:Date.now(),id:btid};
+      updChat(curId,function(c){c.messages.push(btMsg);c.lastMessage=beforeCall.slice(0,45);c.lastTime=Date.now();});
+      renderMsg('convo',btMsg,(getChat(curId)?getChat(curId).messages:[]).length-1);
+    }
     document.getElementById('convo-msgs').scrollTop=99999;
     continue;
   }
@@ -4398,7 +4443,7 @@ function userInitCall(type) {
   }, 900 + Math.random()*600);
 }
 
-// 检测"挂了"并结束通话
+// 检测"挂了"并结束通话（用户触发）
 function checkHangup(text) {
   if (!curId) return false;
   var chat = getChat(curId);
@@ -4419,6 +4464,24 @@ function checkHangup(text) {
   rerender('convo');
   sendSpecialToAI(curId, '通话结束了（时长'+durStr+'），说一句挂断后的自然回应（带emoji，简短）');
   return true;
+}
+
+// AI侧挂断（不再触发AI回复，避免循环）
+function checkHangupFromAI() {
+  if (!curId) return;
+  var chat = getChat(curId);
+  if (!chat || !chat._activeCall) return;
+  var call = chat._activeCall;
+  var dur = Math.round((Date.now()-call.startTime)/1000);
+  var durStr = dur>=60 ? Math.floor(dur/60)+'分'+dur%60+'秒' : dur+'秒';
+  updChat(curId, function(c){
+    (c.messages||[]).forEach(function(m){
+      if(m.id===call.userMsgId){m._callStatus='ended_user';m._callDuration=durStr;}
+      if(m.id===call.aiMsgId){m._callStatus='ended_ai';m._callDuration=durStr;}
+    });
+    delete c._activeCall;
+  });
+  rerender('convo');
 }
 
 function sendSpecialToAI(chatId, prompt) {
@@ -4492,14 +4555,18 @@ function sendSpecialToAI(chatId, prompt) {
     callChatAPI(tempChat).then(function(res) {
         var txt = res && (res.text || res.content || '');
         if (txt) {
-            updChat(chatId, function(c) {
-                var aiMsg = { id: genId(), role: 'assistant', content: txt, ts: Date.now() };
-                c.messages.push(aiMsg);
-                c.lastMessage = txt.slice(0, 45);
-                c.lastTime = Date.now();
+            var parts = txt.split('｜｜').map(function(s){return s.trim();}).filter(Boolean);
+            if (parts.length < 2) parts = [txt];
+            parts.forEach(function(part) {
+                var rid = genId();
+                updChat(chatId, function(c) {
+                    c.messages.push({ id: rid, role: 'assistant', content: part, ts: Date.now() });
+                    c.lastMessage = part.slice(0, 45);
+                    c.lastTime = Date.now();
+                });
+                var fresh = getChat(chatId);
+                if (fresh) renderMsg('convo', fresh.messages[fresh.messages.length - 1], fresh.messages.length - 1);
             });
-            var fresh = getChat(chatId);
-            if (fresh) renderMsg('convo', fresh.messages[fresh.messages.length - 1], fresh.messages.length - 1);
         }
     }).catch(function(e) {
         console.error('sendSpecialToAI error', e);
@@ -4508,6 +4575,60 @@ function sendSpecialToAI(chatId, prompt) {
         updateSend('convo');
         if (typingEl) typingEl.classList.remove('show');
     });
+}
+
+// ══ 主动发消息 ══
+var _idleTimer = null;
+var PROACTIVE_IDLE_MS = 5 * 60 * 1000; // 5分钟无消息触发
+
+function scheduleIdleProactive(chatId) {
+    clearTimeout(_idleTimer);
+    _idleTimer = setTimeout(function() {
+        if (curId === chatId && !isCnvSending) {
+            triggerProactive(chatId, 'idle');
+        }
+    }, PROACTIVE_IDLE_MS);
+}
+
+function triggerProactive(chatId, reason) {
+    var chat = getChat(chatId);
+    if (!chat || isCnvSending) return;
+    var prompts = {
+        open: '你想主动跟用户打个招呼，或者分享一件小事（自然随意，带emoji，1-2句，不要问"需要什么帮助"）',
+        idle: '用户好久没说话了，你想主动发一条消息关心一下或者聊点什么（自然，带emoji，1句话）',
+        manual: '主动发一条消息给用户（内容自由，自然随意，带emoji，1-2句）'
+    };
+    var p = prompts[reason] || prompts.manual;
+    if (chat.chatType === 'group') {
+        var members = (chat.members || []).filter(function(m){ return m.model; });
+        if (!members.length) return;
+        var member = members[Math.floor(Math.random() * members.length)];
+        isCnvSending = true; updateSend('convo');
+        var typingEl = document.getElementById('convo-typing');
+        var typingTxt = typingEl ? typingEl.querySelector('.typing-txt') : null;
+        if (typingTxt) typingTxt.textContent = member.name + '在输入…';
+        if (typingEl) typingEl.classList.add('show');
+        var freshChat = getChat(chatId);
+        var worldPart = freshChat.worldBook ? '【世界书】\n' + freshChat.worldBook + '\n\n' : '';
+        var otherNames = members.filter(function(x){ return x.id !== member.id; }).map(function(x){ return x.name; }).join('、');
+        var sys = worldPart + '你在一个群聊中，你的名字是"' + member.name + '"。群里还有：' + otherNames + '。\n【你的角色设定】\n' + (member.systemPrompt || '你是一个友善的AI角色。') + '\n\n【严格规则】\n1. 只说自己的话\n2. 不加名字前缀\n3. 只说1-2句，自然主动';
+        doStream(member.model, sys, [{role:'user', content:p}], null, 0.9).then(function(result) {
+            var replyText = (result.text || '').replace(/^\[?[^\]]{1,10}\]?\s*[:：]\s*/, '').trim();
+            if (!replyText) return;
+            var rid = genId();
+            var cost = calcCost(result.tIn, result.tOut, member.model);
+            var replyMsg = {role:'assistant', content:replyText, senderName:member.name, senderEmoji:member.emoji||'', senderAvatarImg:member.avatarImg||'', memberId:member.id, ts:Date.now(), id:rid, cost:cost};
+            updChat(chatId, function(c){ c.messages.push(replyMsg); c.lastMessage='['+member.name+']: '+replyText.slice(0,40); c.lastTime=Date.now(); c.totalCost=(c.totalCost||0)+cost; });
+            if (typingEl) typingEl.classList.remove('show');
+            renderMsg('convo', replyMsg, (getChat(chatId)||{messages:[]}).messages.length - 1);
+            refreshCostBadge();
+            document.getElementById('convo-msgs').scrollTop = 99999;
+        }).catch(function(e){ console.error('proactive group error', e); })
+        .finally(function(){ isCnvSending = false; updateSend('convo'); if (typingEl) typingEl.classList.remove('show'); });
+    } else {
+        sendSpecialToAI(chatId, p);
+    }
+    scheduleIdleProactive(chatId);
 }
 
 // ── 红包弹窗 ──
