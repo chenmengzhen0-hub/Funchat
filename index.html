@@ -320,6 +320,10 @@ html,body{height:100%;overflow:hidden;background:#f5f5f3}
 .sticker-editing .sticker-del{display:flex}
 /* 表情包气泡 */
 .bubble-sticker{background:transparent!important;border:none!important;box-shadow:none!important;padding:2px 0!important}
+.bubble-voice{cursor:pointer;transition:opacity .2s}
+.bubble-voice.tts-loading{opacity:0.5}
+.bubble-voice.tts-playing .voice-bar{animation:mwav .4s ease-in-out infinite alternate!important}
+.bubble-voice.tts-playing .voice-icon{animation:tpulse .6s infinite}
 .bubble-sticker img{width:100px;height:100px;object-fit:contain;border-radius:8px;display:block}
 .bubble-sticker .sticker-emoji-big{font-size:72px;line-height:1;display:block}
 /* 描述输入弹窗 */
@@ -840,6 +844,22 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
           <span style="position:absolute;content:'';height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,.2)" id="voice-toggle-knob"></span>
         </label>
       </div>
+      <div class="fg">
+        <div class="flbl">TTS音色 <span style="font-size:10px;color:#bbb">（点语音气泡播放）</span></div>
+        <select class="finp" id="cd-tts-voice" onchange="saveCdSettings()">
+          <option value="">无</option>
+          <optgroup label="── 男声 ──">
+          <option value="18d03d4f02f048fcb0240d94fdfbae4a">凌烬</option>
+          <option value="bf8cccd5853942b89a07991a0483fef1">狐狸久 Rafa</option>
+          <option value="a56e22a0ec34498da51cdb396f5fcb18">该隐</option>
+          </optgroup>
+          <optgroup label="── 女声 ──">
+          <option value="24af17f6001044aba37ba2ae30aa487e">叶瞬光</option>
+          <option value="2ec2b20afcbf447bbf17d7d90c4aac01">陈雪</option>
+          <option value="a6aa51db94ea447cbf895062f0f84b82">清冷</option>
+          </optgroup>
+        </select>
+      </div>
       <div class="fg"><div class="flbl">品牌</div><div class="chip-row" id="cd-brand"></div></div>
       <div class="fg"><div class="flbl">版本</div><select class="finp" id="cd-model" onchange="onCdModelChange()"></select></div>
       <div class="fg" id="cd-custom-grp" style="display:none"><div class="flbl">自定义模型ID</div><input class="finp" id="cd-custom-id" placeholder="如 gpt-4o" oninput="saveCdCustom()" style="width:100%"></div>
@@ -920,6 +940,7 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
     <label class="mflbl">Kimi API Key</label><input class="mfinp" id="sk-moonshot" type="password" placeholder="sk-...">
     <label class="mflbl">OpenRouter API Key</label><input class="mfinp" id="sk-openrouter" type="password" placeholder="sk-or-...">
     <label class="mflbl">Gemini API Key</label><input class="mfinp" id="sk-gemini" type="password" placeholder="AIza...">
+    <label class="mflbl">Fish Audio API Key（语音合成）</label><input class="mfinp" id="sk-fishaudio" type="password" placeholder="ak-...">
     <label class="mflbl">Jamendo Client ID（音乐）</label><input class="mfinp" id="sk-jamendo" placeholder="数字串">
     <label class="mflbl">音乐代理（可选）</label><input class="mfinp" id="music-proxy" placeholder="https://...vercel.app">
     <div style="margin-top:12px;padding:10px;background:#f0fdf4;border-radius:10px;font-size:12px;color:#166534;line-height:1.7">🔧 自定义 Provider（OpenAI兼容/Anthropic原生）</div>
@@ -1690,6 +1711,7 @@ var vbub=document.createElement('div');vbub.className='bubble bubble-voice';
 if(chat2&&chat2.bubbleBorder&&chat2.bubbleBorder){vbub.classList.add(chat2.bubbleBorder);}
 vbub.style.background=S.bai;vbub.style.color=S.text;vbub.style.border='1px solid '+S.border;
 vbub.innerHTML='<span class="voice-icon">🔊</span><div class="voice-wave"><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div></div><span class="voice-dur">'+dur+'</span>';
+vbub.onclick=function(){playFishTTS(txt,(chat2&&chat2.ttsVoice)||'',vbub);};
 var vtxt=document.createElement('div');vtxt.className='voice-text';vtxt.textContent=txt;
 var bubWrap2=document.createElement('div');bubWrap2.style.cssText='display:flex;flex-direction:column;max-width:calc(100% - 42px)';
 bubWrap2.appendChild(vbub);bubWrap2.appendChild(vtxt);
@@ -1745,6 +1767,7 @@ if(borderCls){
 if(m.voiceDur&&m.role==='assistant'){
   bub.classList.add('bubble-voice');
   bub.innerHTML='<span class="voice-icon">🔊</span><div class="voice-wave"><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div></div><span class="voice-dur">'+m.voiceDur+'</span>';
+bub.onclick=function(){var _c2=getChat(curId);playFishTTS(applyRx(m.content,'A'),(_c2&&_c2.ttsVoice)||'',bub);};
   bub.style.fontFamily=S.fc;
   bub.style.background=S.bai;bub.style.color=S.text;bub.style.border='1px solid '+S.border;
   var vWrap=document.createElement('div');vWrap.style.cssText='display:flex;flex-direction:column;max-width:calc(100% - 42px)';
@@ -1935,7 +1958,7 @@ if(eg){eg.innerHTML='';['🤖','🐱','🐶','🦊','🐼','🐨','🦄','🐸',
 // 边框
 var cur=chat.bubbleBorder||'';document.querySelectorAll('.border-opt').forEach(function(o){o.classList.toggle('sel',o.dataset.border===cur);});
 // 语音开关
-var vc=document.getElementById('cd-voice-mode');if(vc){vc.checked=!!chat.voiceMode;updateVoiceToggleUI(!!chat.voiceMode);}
+var vc=document.getElementById('cd-voice-mode');if(vc){vc.checked=!!chat.voiceMode;updateVoiceToggleUI(!!chat.voiceMode);}var tvEl=document.getElementById('cd-tts-voice');if(tvEl)tvEl.value=chat.ttsVoice||'';
 }
 function updateVoiceToggleUI(on){var bg=document.getElementById('voice-toggle-bg');var knob=document.getElementById('voice-toggle-knob');if(bg)bg.style.background=on?'var(--accent)':'#ddd';if(knob)knob.style.left=on?'21px':'3px';}
 function setBubbleBorder(cls){updChat(curId,function(c){c.bubbleBorder=cls;});document.querySelectorAll('.border-opt').forEach(function(o){o.classList.toggle('sel',o.dataset.border===cls);});rerender('convo');}
@@ -2085,7 +2108,7 @@ document.getElementById('cd-temp-grp').style.display=md.thinking?'none':'flex';
 }
 function onCdModelChange(){var mid=document.getElementById('cd-model').value;if(mid!=='custom'){var md=getMd(mid);document.getElementById('cd-temp-grp').style.display=md.thinking?'none':'flex';updChat(curId,function(c){c.model=mid;});var b=BRANDS.find(function(x){return x.id===cdBrand;})||BRANDS[0];var hd=document.getElementById('convo-hsub');if(hd)hd.textContent=b.name+' '+md.name;}}
 function saveCdCustom(){var customId=document.getElementById('cd-custom-id').value.trim();if(customId){var finalId=cdBrand==='custom'?('custom::'+customId):customId;updChat(curId,function(c){c.model=finalId;c.customModelId=customId;});}}
-function saveCdSettings(){var temp=parseFloat(document.getElementById('cd-temp').value);var ctx=document.getElementById('cd-ctx').value;var sys=document.getElementById('cd-sys').value;var world=document.getElementById('cd-world').value;var vc=document.getElementById('cd-voice-mode');var vm=vc?vc.checked:false;updateVoiceToggleUI(vm);updChat(curId,function(c){c.temperature=temp;c.contextLimit=ctx;c.systemPrompt=sys;c.worldBook=world;c.voiceMode=vm;});}
+function saveCdSettings(){var temp=parseFloat(document.getElementById('cd-temp').value);var ctx=document.getElementById('cd-ctx').value;var sys=document.getElementById('cd-sys').value;var world=document.getElementById('cd-world').value;var vc=document.getElementById('cd-voice-mode');var vm=vc?vc.checked:false;updateVoiceToggleUI(vm);var tvEl=document.getElementById('cd-tts-voice');var tv=tvEl?tvEl.value:'';updChat(curId,function(c){c.temperature=temp;c.contextLimit=ctx;c.systemPrompt=sys;c.worldBook=world;c.voiceMode=vm;c.ttsVoice=tv;});}
 function toggleConvoDrawer(){var d=document.getElementById('convo-drawer');if(d.style.transform==='translateX(0px)'){d.style.transform='translateX(100%)';}else{d.style.transform='translateX(0px)';renderGcDrawer(getChat(curId));}}
 function clearConvoMsgs(){if(!confirm('确定清空所有消息记录？'))return;updChat(curId,function(c){c.messages=[];c.totalCost=0;c.totalTokensIn=0;c.totalTokensOut=0;c.lastMessage='';});rerender('convo');refreshCostBadge();}
 function delConvo(){
@@ -2671,7 +2694,7 @@ function sendToWorkshop(text){switchTab('workshop');document.getElementById('tab
 function openSettings(){
 var s=loadSettings();
 ['anthropic','deepseek','moonshot','openrouter','gemini'].forEach(function(k){var el=document.getElementById('sk-'+k);if(el)el.value=(s.keys||{})[k]||'';});
-document.getElementById('sk-jamendo').value=(s.keys&&s.keys.jamendo)||'';
+document.getElementById('sk-jamendo').value=(s.keys&&s.keys.jamendo)||'';var faEl2=document.getElementById('sk-fishaudio');if(faEl2)faEl2.value=(s.keys&&s.keys.fishaudio)||'';
 document.getElementById('music-proxy').value=s.musicProxy||'';
 document.getElementById('sk-cu').value=s.customUrl||'';
 document.getElementById('sk-ck').value=(s.keys&&s.keys.custom)||'';
@@ -2682,7 +2705,7 @@ renderUsageUI();openModal('mod-settings');
 function saveSettings(){
 var s=loadSettings();if(!s.keys)s.keys={};
 ['anthropic','deepseek','moonshot','openrouter','gemini'].forEach(function(k){var el=document.getElementById('sk-'+k);if(el)s.keys[k]=el.value.trim();});
-s.keys.jamendo=document.getElementById('sk-jamendo').value.trim();
+s.keys.jamendo=document.getElementById('sk-jamendo').value.trim();var faEl=document.getElementById('sk-fishaudio');if(faEl)s.keys.fishaudio=faEl.value.trim();
 s.musicProxy=document.getElementById('music-proxy').value.trim();
 s.customUrl=document.getElementById('sk-cu').value.trim();
 s.keys.custom=document.getElementById('sk-ck').value.trim();
@@ -4810,6 +4833,75 @@ function showToast(msg) {
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(function(){ t.textContent = '🎙️ 聆听中…松开发送'; t.classList.remove('show'); }, 2000);
+}
+
+
+// ══ Fish Audio TTS ══
+var _ttsAudio = null;
+var _ttsPlaying = null; // 当前播放的bubble元素
+
+var FISH_VOICES = {
+    '18d03d4f02f048fcb0240d94fdfbae4a': '凌烬',
+    'bf8cccd5853942b89a07991a0483fef1': '狐狸久',
+    'a56e22a0ec34498da51cdb396f5fcb18': '该隐'
+};
+
+async function playFishTTS(text, voiceId, bubbleEl) {
+    var s = loadSettings();
+    var apiKey = s.keys && s.keys.fishaudio;
+    if (!apiKey) { showToast('请先在设置里填写 Fish Audio API Key'); return; }
+    if (!voiceId) return;
+
+    // 如果同一个气泡正在播放，点击暂停
+    if (_ttsPlaying === bubbleEl && _ttsAudio && !_ttsAudio.paused) {
+        _ttsAudio.pause();
+        bubbleEl.classList.remove('tts-playing');
+        _ttsPlaying = null;
+        return;
+    }
+    // 停止之前的播放
+    if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
+    if (_ttsPlaying) { _ttsPlaying.classList.remove('tts-playing'); _ttsPlaying = null; }
+
+    bubbleEl.classList.add('tts-loading');
+    try {
+        var resp = await fetch('https://music-api-2026.vercel.app/api/tts', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + apiKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: text,
+                reference_id: voiceId,
+                format: 'mp3',
+                latency: 'normal'
+            })
+        });
+        if (!resp.ok) { throw new Error('TTS请求失败 ' + resp.status); }
+        var blob = await resp.blob();
+        var url = URL.createObjectURL(blob);
+        var audio = new Audio(url);
+        _ttsAudio = audio;
+        _ttsPlaying = bubbleEl;
+        bubbleEl.classList.remove('tts-loading');
+        bubbleEl.classList.add('tts-playing');
+        audio.onended = function() {
+            bubbleEl.classList.remove('tts-playing');
+            _ttsPlaying = null;
+            _ttsAudio = null;
+            URL.revokeObjectURL(url);
+        };
+        audio.onerror = function() {
+            bubbleEl.classList.remove('tts-playing');
+            _ttsPlaying = null; _ttsAudio = null;
+            showToast('播放失败');
+        };
+        await audio.play();
+    } catch(e) {
+        bubbleEl.classList.remove('tts-loading');
+        showToast('TTS错误: ' + e.message);
+    }
 }
 
 </script>
