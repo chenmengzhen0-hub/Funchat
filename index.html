@@ -1349,8 +1349,6 @@ var r=await fetch(aUrl,{method:'POST',headers:{'Content-Type':'application/json'
 var d=await r.json();
 if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
 tIn+=d.usage?d.usage.input_tokens||0:0;tOut+=d.usage?d.usage.output_tokens||0:0;
-alert('stop_reason:'+d.stop_reason);
-
 if(d.stop_reason==='tool_use'){
 var tbs=d.content.filter(function(b){return b.type==='tool_use';});
 var results=await Promise.all(tbs.map(async function(tb){var msg=await handleMusicTool(tb.name,tb.input);if(!toolMsg)toolMsg=msg;return{type:'tool_result',tool_use_id:tb.id,content:msg||'OK'};}));
