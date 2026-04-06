@@ -1321,8 +1321,9 @@ return'你是AI创意工作室助手,专注设计界面主题和生成游戏。\
 // ══ CHAT API (FunChat5.3 original style, non-streaming) ══
 function toolsAnthropic(){return[
 {name:'play_music',description:'搜索播放音乐,或控制播放器。action:search时必须填keyword。',input_schema:{type:'object',properties:{action:{type:'string',enum:['search','next','prev','pause','resume','close']},keyword:{type:'string'},message:{type:'string'}},required:['action','message']}},
-{name:'send_gift',description:'给用户发红包或转账。当用户要求AI发红包/转账/打赏时调用。',input_schema:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number',description:'金额，单位元'},note:{type:'string',description:'红包祝福语或转账备注'}},required:['type','amount','note']}}
+{name:'send_gift',description:'给用户发红包或转账。当用户说发红包/转账/打赏/给钱时必须调用此工具，禁止用文字代替。',input_schema:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number',description:'金额，单位元'},message:{type:'string',description:'红包祝福语或转账备注'}},required:['type','amount','message']}}
 ];}
+
 function toolsOpenAI(){return[
 {type:'function',function:{name:'play_music',description:'搜索播放音乐,或控制播放器。',parameters:{type:'object',properties:{action:{type:'string',enum:['search','next','prev','pause','resume','close']},keyword:{type:'string'},message:{type:'string'}},required:['action','message']}}},
 {type:'function',function:{name:'send_gift',description:'给用户发红包或转账。当用户要求AI发红包/转账/打赏时调用。',parameters:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number'},note:{type:'string'}},required:['type','amount','note']}}}
@@ -1406,7 +1407,7 @@ return args.message||'🎵 好的';
 if(name==='send_gift'){
 var gtype=args.type||'hongbao';
 var gamt=parseFloat(args.amount)||1.00;
-var gnote=args.note||'送给你';
+var gnote=args.message||args.note||'送给你';
 // 渲染AI发出的气泡（显示在AI一侧）
 setTimeout(function(){renderAIGift(gtype,gamt,gnote);},100);
 return gtype==='hongbao'?'🧧 红包已发出！':'💸 转账已发出！';
