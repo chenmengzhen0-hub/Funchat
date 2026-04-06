@@ -1344,7 +1344,7 @@ if(useAnthropicPath){
 var aUrl=(brand==='custom'&&customFmt==='anthropic')?actualUrl:'https://api.anthropic.com/v1/messages';
 var cur=msgs;var finalText='';var toolMsg='';
 for(var i=0;i<3;i++){
-var r=await fetch(aUrl,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify((function(){var lm=cur.filter(function(m){return m.role==='user';}).slice(-1)[0];var lc=lm?(typeof lm.content==='string'?lm.content:''):'';var wg=/红包|转账|打赏|给我钱|发钱|打钱/.test(lc);return{model:actualModelId,max_tokens:4096,temperature:temp,system:applyRx(sys,'C'),messages:cur,tools:toolsAnthropic(),tool_choice:wg?{type:'any'}:{type:'auto'}};})())});
+var r=await fetch(aUrl,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify((function(){var lm=cur.filter(function(m){return m.role==='user';}).slice(-1)[0];var lc=lm?(typeof lm.content==='string'?lm.content:''):'';var wg=/红包|转账|打赏|给我钱|发钱|打钱/.test(lc);return{model:actualModelId,max_tokens:4096,temperature:temp,system:applyRx(sys,'C'),messages:cur,tools:toolsAnthropic(),tool_choice:wg?{type:'tool',name:'send_gift'}:{type:'auto'}};})())});
 var d=await r.json();
 if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
 tIn+=d.usage?d.usage.input_tokens||0:0;tOut+=d.usage?d.usage.output_tokens||0:0;
