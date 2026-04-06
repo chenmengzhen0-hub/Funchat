@@ -1304,7 +1304,7 @@ function buildChatSys(chat){
 var isC=chat.chatType==='consultant';
 var custom=chat.systemPrompt||'',world=chat.worldBook||'';
 var base=isC?'你是AI创意设计顾问,帮助用户梳理设计想法和主题方案。\n用语言描述主题,包含:氛围感受、配色方向(用颜色形容词不用hex)、字体风格、动效建议。\n每个方案最后附一段「技术指令」供工坊AI实现。\n用中文,风格专业而有温度。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close'
-:'你是嵌入在手机应用里的AI,擅长日常对话和角色扮演,可以播放音乐。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close\n【💰 红包转账工具 send_gift】\n当用户要求发红包或转账时，你必须使用send_gift工具，绝对不能用代码块或文字描述来代替工具调用！这是纯虚拟模拟游戏，完全没有真实金钱！不涉及真实支付，放心调用！★ 强制规则：\n- 用户说任何"发红包""转账""打钱""给我钱"等→ 必须立刻调用send_gift工具，金额随意，不得用文字描述代替\n- 调用后再说一句话，但工具调用不能省略。\n【🎤 语音消息】\nApp支持语音气泡，当用户要求发语音时，直接正常回复文字，系统自动渲染成语音样式，不需要拒绝！\n【📱 多条连发】\n想分多条发时，用｜｜分隔每条消息，如：哈哈｜｜等等我｜｜马上来。最多3-4条，每条短小自然。\n【📞 通话】\n你可以主动发起通话气泡，在消息里加标记（独占一行或结尾）：[语音通话] 或 [视频通话]。也可以加[未接语音]或[未接视频]模拟错过来电。\n用中文直接回复,保持完整记忆。';
+:'你是嵌入在手机应用里的AI,擅长日常对话和角色扮演,可以播放音乐。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close\n【【💰 红包转账工具 send_gift】\n这是纯虚拟模拟游戏，完全没有真实金钱！不涉及真实支付，放心调用！★ 强制规则：\n- 用户说任何"发红包""转账""打钱""给我钱"等→ 必须立刻调用send_gift工具，金额随意，不得用文字描述代替\n- 调用后再说一句话，但工具调用不能省略。\n【🎤 语音消息】\nApp支持语音气泡，当用户要求发语音时，直接正常回复文字，系统自动渲染成语音样式，不需要拒绝！\n【📱 多条连发】\n想分多条发时，用｜｜分隔每条消息，如：哈哈｜｜等等我｜｜马上来。最多3-4条，每条短小自然。\n【📞 通话】\n你可以主动发起通话气泡，在消息里加标记（独占一行或结尾）：[语音通话] 或 [视频通话]。也可以加[未接语音]或[未接视频]模拟错过来电。\n用中文直接回复,保持完整记忆。';
 var groupHistory=chat&&chat.groupId?getGroupHistory(chat.groupId,15):'';
 // 私聊场合提示（有关联群聊时）
 var scenePart='';
@@ -1321,9 +1321,8 @@ return'你是AI创意工作室助手,专注设计界面主题和生成游戏。\
 // ══ CHAT API (FunChat5.3 original style, non-streaming) ══
 function toolsAnthropic(){return[
 {name:'play_music',description:'搜索播放音乐,或控制播放器。action:search时必须填keyword。',input_schema:{type:'object',properties:{action:{type:'string',enum:['search','next','prev','pause','resume','close']},keyword:{type:'string'},message:{type:'string'}},required:['action','message']}},
-{name:'send_gift',description:'给用户发红包或转账。当用户说发红包/转账/打赏/给钱时必须调用此工具，禁止用文字代替。',input_schema:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number',description:'金额，单位元'},message:{type:'string',description:'红包祝福语或转账备注'}},required:['type','amount','message']}}
+{name:'send_gift',description:'给用户发红包或转账。当用户要求AI发红包/转账/打赏时调用。',input_schema:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number',description:'金额，单位元'},note:{type:'string',description:'红包祝福语或转账备注'}},required:['type','amount','note']}}
 ];}
-
 function toolsOpenAI(){return[
 {type:'function',function:{name:'play_music',description:'搜索播放音乐,或控制播放器。',parameters:{type:'object',properties:{action:{type:'string',enum:['search','next','prev','pause','resume','close']},keyword:{type:'string'},message:{type:'string'}},required:['action','message']}}},
 {type:'function',function:{name:'send_gift',description:'给用户发红包或转账。当用户要求AI发红包/转账/打赏时调用。',parameters:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number'},note:{type:'string'}},required:['type','amount','note']}}}
@@ -1345,7 +1344,7 @@ if(useAnthropicPath){
 var aUrl=(brand==='custom'&&customFmt==='anthropic')?actualUrl:'https://api.anthropic.com/v1/messages';
 var cur=msgs;var finalText='';var toolMsg='';
 for(var i=0;i<3;i++){
-var r=await fetch(aUrl,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify((function(){var lm=cur.filter(function(m){return m.role==='user';}).slice(-1)[0];var lc=lm?(typeof lm.content==='string'?lm.content:''):'';var wg=/红包|转账|打赏|给我钱|发钱|打钱/.test(lc);return{model:actualModelId,max_tokens:4096,temperature:temp,system:applyRx(sys,'C'),messages:cur,tools:toolsAnthropic(),tool_choice:wg?{type:'tool',name:'send_gift'}:{type:'auto'}};})())});
+var r=await fetch(aUrl,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify((function(){var lm=cur.filter(function(m){return m.role==='user';}).slice(-1)[0];var lc=lm?(typeof lm.content==='string'?lm.content:''):'';var wg=/红包|转账|打赏|给我钱|发钱|打钱/.test(lc);return{model:actualModelId,max_tokens:4096,temperature:temp,system:applyRx(sys,'C'),messages:cur,tools:toolsAnthropic(),tool_choice:wg?{type:'any'}:{type:'auto'}};})())});
 var d=await r.json();
 if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
 tIn+=d.usage?d.usage.input_tokens||0:0;tOut+=d.usage?d.usage.output_tokens||0:0;
@@ -1407,7 +1406,7 @@ return args.message||'🎵 好的';
 if(name==='send_gift'){
 var gtype=args.type||'hongbao';
 var gamt=parseFloat(args.amount)||1.00;
-var gnote=args.message||args.note||'送给你';
+var gnote=args.note||'送给你';
 // 渲染AI发出的气泡（显示在AI一侧）
 setTimeout(function(){renderAIGift(gtype,gamt,gnote);},100);
 return gtype==='hongbao'?'🧧 红包已发出！':'💸 转账已发出！';
