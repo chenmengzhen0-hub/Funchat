@@ -1692,7 +1692,20 @@ var dur=Math.max(1,Math.min(60,Math.round(txt.length/8)))+'″';
 var vbub=document.createElement('div');vbub.className='bubble bubble-voice';
 if(chat2&&chat2.bubbleBorder&&chat2.bubbleBorder){vbub.classList.add(chat2.bubbleBorder);}
 vbub.style.background=S.bai;vbub.style.color=S.text;vbub.style.border='1px solid '+S.border;
-vbub.innerHTML='<span class="voice-icon">🔊</span><div class="voice-wave"><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div></div><span class="voice-dur">'+dur+'</span>';
+vbub.innerHTML='<div class="voice-wave"><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div></div><span class="voice-dur">'+dur+'</span>';
+vbub.addEventListener('click',function(){
+  var waveEl=vbub.querySelector('.voice-wave');
+  if(!waveEl)return;
+  if(waveEl.classList.contains('playing')){
+    waveEl.classList.remove('playing');
+    if(vbub._vt){clearTimeout(vbub._vt);vbub._vt=null;}
+  }else{
+    document.querySelectorAll('.voice-wave.playing').forEach(function(w){w.classList.remove('playing');if(w.parentNode&&w.parentNode._vt){clearTimeout(w.parentNode._vt);w.parentNode._vt=null;}});
+    waveEl.classList.add('playing');
+    var durSec=parseInt(dur)||3;
+    vbub._vt=setTimeout(function(){waveEl.classList.remove('playing');vbub._vt=null;},durSec*1000);
+  }
+});
 var vtxt=document.createElement('div');vtxt.className='voice-text';vtxt.textContent=txt;
 var bubWrap2=document.createElement('div');bubWrap2.style.cssText='display:flex;flex-direction:column;max-width:calc(100% - 42px)';
 bubWrap2.appendChild(vbub);bubWrap2.appendChild(vtxt);
@@ -1747,7 +1760,7 @@ if(borderCls){
 // ── 语音气泡（必须在row/av定义后）──
 if(m.voiceDur&&m.role==='assistant'){
   bub.classList.add('bubble-voice');
-  bub.innerHTML='<span class="voice-icon">🔊</span><div class="voice-wave"><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div></div><span class="voice-dur">'+m.voiceDur+'</span>';
+  bub.innerHTML='<div class="voice-wave"><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div></div><span class="voice-dur">'+m.voiceDur+'</span>';
   bub.style.fontFamily=S.fc;
   bub.style.background=S.bai;bub.style.color=S.text;bub.style.border='1px solid '+S.border;
   var vWrap=document.createElement('div');vWrap.style.cssText='display:flex;flex-direction:column;max-width:calc(100% - 42px)';
@@ -1889,7 +1902,7 @@ for(var pi=0;pi<parts.length;pi++){
   // 普通文字消息
   var rid=genId();
   var useVoice=chat2&&chat2.voiceMode&&Math.random()<0.35;
-  var voiceDur=useVoice?(Math.floor(Math.random()*8)+2)+'″':null;
+  var voiceDur=useVoice?Math.max(1,Math.min(60,Math.round(partText.length/8)))+'″':null;
   var newMsg={role:'assistant',content:partText,meta:pi===0?meta:null,ts:Date.now(),tIn:pi===0?result.tIn:0,tOut:pi===0?result.tOut:0,cost:pi===0?cost:0,thinking:pi===0?result.thinking:null,id:rid,voiceDur:voiceDur};
   updChat(curId,function(c){c.messages.push(newMsg);c.lastMessage=partText.slice(0,45);c.lastTime=Date.now();if(pi===0){c.totalCost=(c.totalCost||0)+cost;c.totalTokensIn=(c.totalTokensIn||0)+result.tIn;c.totalTokensOut=(c.totalTokensOut||0)+result.tOut;}});
   if(pi>0){
