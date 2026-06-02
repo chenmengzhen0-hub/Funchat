@@ -1339,8 +1339,8 @@ function saveWsConfigData(){localStorage.setItem('ws_cfg_v2',JSON.stringify(wsCo
 var wsCurrentGame=null,wsTotalCost=0;
 function getModelCache(){try{return JSON.parse(localStorage.getItem('ai_model_cache')||'{}');}catch(e){return{};}}
 function getModels(brand){var c=getModelCache();return(c[brand]&&c[brand].length)?c[brand]:(MODELS[brand]||[]);}
-function getBrand(mid){if(!mid)return'anthropic';if(mid.indexOf('custom::')===0)return'custom';var allB=Object.keys(MODELS);for(var b=0;b<allB.length;b++){var ms=getModels(allB[b]);for(var j=0;j<ms.length;j++){if(ms[j].id===mid)return allB[b];}}return'anthropic';}
-function getMd(mid){var allB=Object.keys(MODELS);for(var b=0;b<allB.length;b++){var ms=getModels(allB[b]);for(var j=0;j<ms.length;j++){if(ms[j].id===mid)return ms[j];}}return{id:mid,name:mid,in:0,out:0};}
+function getBrand(mid){if(!mid)return'anthropic';if(mid.indexOf('custom::')===0)return'custom';var allB=Object.keys(MODELS);for(var b=0;b<allB.length;b++){var ms=MODELS[allB[b]];for(var j=0;j<ms.length;j++){if(ms[j].id===mid)return allB[b];}}var cache=getModelCache();for(var cb in cache){var cms=cache[cb]||[];for(var j=0;j<cms.length;j++){if(cms[j].id===mid)return cb;}}return'anthropic';}
+function getMd(mid){var allB=Object.keys(MODELS);for(var b=0;b<allB.length;b++){var ms=MODELS[allB[b]];for(var j=0;j<ms.length;j++){if(ms[j].id===mid)return ms[j];}}var cache=getModelCache();for(var cb in cache){var cms=cache[cb]||[];for(var j=0;j<cms.length;j++){if(cms[j].id===mid)return cms[j];}}return{id:mid,name:mid,in:0,out:0};}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
 function calcCost(tIn,tOut,mid){var p=getMd(mid);return(tIn/1e6)*p.in+(tOut/1e6)*p.out;}
 function fmtCost(c){if(!c||c===0)return'$0.000';if(c<0.00001)return'$'+c.toFixed(7);if(c<0.0001)return'$'+c.toFixed(6);return'$'+c.toFixed(5);}
@@ -5144,12 +5144,14 @@ function startVoiceInput(e) {
         showToast('当前浏览器不支持语音识别');
         return;
     }
-    closePlusPanel(); closeStickerPanel();
+    if (!_callState) { closePlusPanel(); closeStickerPanel(); }
     _voiceActive = true;
-    var btn = document.getElementById('mic-btn');
-    if (btn) btn.classList.add('recording');
+    var btn = document.getElementById(_callState ? 'call-voice-btn' : 'mic-btn');
+    if (btn) { btn.classList.add('recording'); if (_callState) btn.style.background='rgba(255,60,60,.75)'; }
     var toast = document.getElementById('voice-toast');
-    if (toast) toast.classList.add('show');
+    if (toast && !_callState) toast.classList.add('show');
+    // Show recording hint in call subtitle
+    if (_callState) callShowSubtitle('🎤 正在听…');
 
     var recog = new SpeechRecog();
     _voiceRecog = recog;
@@ -5177,8 +5179,8 @@ function startVoiceInput(e) {
     };
     recog.onend = function() {
         _voiceActive = false;
-        var btn2 = document.getElementById('mic-btn');
-        if (btn2) btn2.classList.remove('recording');
+        var btn2 = document.getElementById(_callState ? 'call-voice-btn' : 'mic-btn');
+        if (btn2) { btn2.classList.remove('recording'); if (_callState) btn2.style.background='rgba(255,255,255,.22)'; }
         var toast2 = document.getElementById('voice-toast');
         if (toast2) toast2.classList.remove('show');
         _voiceRecog = null;
@@ -5187,9 +5189,18 @@ function startVoiceInput(e) {
 }
 
 function stopVoiceInput(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (_voiceRecog) {
         try { _voiceRecog.stop(); } catch(ex) {}
+    }
+}
+
+function toggleCallVoice() {
+    if (_voiceActive) {
+        stopVoiceInput(null);
+    } else {
+        var fakeEvt = { preventDefault: function(){} };
+        startVoiceInput(fakeEvt);
     }
 }
 
@@ -6215,9 +6226,7 @@ function parseMemoirTag(text, authorChatId) {
   </div>
   <div id="call-subtitle"></div>
   <div id="call-input-row">
-    <button id="call-voice-btn" style="width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center"
-      ontouchstart="startVoiceInput(event)" ontouchend="stopVoiceInput(event)"
-      onmousedown="startVoiceInput(event)" onmouseup="stopVoiceInput(event)" title="按住说话">🎤</button>
+    <button id="call-voice-btn" style="width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .15s" onclick="toggleCallVoice()" title="点击说话">🎤</button>
     <input id="call-text-inp" placeholder="说点什么…" autocomplete="off"
       onkeydown="if(event.key==='Enter'){event.preventDefault();callSendText();}">
   </div>
