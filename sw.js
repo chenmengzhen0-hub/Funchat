@@ -1,4 +1,4 @@
-const CACHE = 'funchat-v1';
+const CACHE = 'funchat-v2';
 const FILES = ['/', '/index.html', '/icon.svg', '/manifest.json'];
 
 self.addEventListener('install', e => {

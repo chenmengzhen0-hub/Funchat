@@ -901,7 +901,12 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
         <div class="plus-icon" style="background:linear-gradient(135deg,#30b0c7,#0c7b93)">🎥</div>
         <span class="plus-label">视频</span>
       </div>
+      <div class="plus-item" onclick="document.getElementById('img-file-inp').click()">
+        <div class="plus-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">📷</div>
+        <span class="plus-label">图片</span>
+      </div>
     </div>
+    <input type="file" id="img-file-inp" accept="image/*" style="display:none" onchange="sendUserImage(this)">
     <button class="plus-btn" id="plus-btn" onclick="togglePlusPanel()">＋</button>
     <button class="plus-btn" id="sticker-btn" onclick="toggleStickerPanel()" style="font-size:22px">😄</button>
     <button class="plus-btn" id="mic-btn" ontouchstart="startVoiceInput(event)" ontouchend="stopVoiceInput(event)" onmousedown="startVoiceInput(event)" onmouseup="stopVoiceInput(event)" style="font-size:19px;flex-shrink:0" title="按住说话">🎤</button>
@@ -980,8 +985,8 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
         </select>
       </div>
       <div class="fg"><div class="flbl">品牌</div><div class="chip-row" id="cd-brand"></div></div>
-      <div class="fg"><div class="flbl">版本</div><select class="finp" id="cd-model" onchange="onCdModelChange()"></select></div>
-      <div class="fg" id="cd-custom-grp" style="display:none"><div class="flbl">自定义模型ID</div><input class="finp" id="cd-custom-id" placeholder="如 gpt-4o" oninput="saveCdCustom()" style="width:100%"></div>
+      <div class="fg"><div class="flbl" style="display:flex;justify-content:space-between;align-items:center"><span>版本</span><button onclick="fetchModels(cdBrand)" style="border:none;background:transparent;font-size:13px;cursor:pointer;color:#4f8ef7;padding:2px 4px" title="从API拉取最新模型列表">🔄 刷新</button></div><select class="finp" id="cd-model" onchange="onCdModelChange()"></select></div>
+      <div class="fg" id="cd-custom-grp" style="display:none"><div class="flbl" style="display:flex;justify-content:space-between;align-items:center"><span>自定义模型ID</span><button onclick="fetchModels('custom')" style="border:none;background:transparent;font-size:13px;cursor:pointer;color:#4f8ef7;padding:2px 4px" title="从API拉取模型列表">🔄 刷新</button></div><input class="finp" id="cd-custom-id" list="cd-custom-datalist" placeholder="如 gpt-4o" oninput="saveCdCustom()" style="width:100%"><datalist id="cd-custom-datalist"></datalist></div>
       <div class="fg" id="cd-temp-grp">
         <div class="flbl">温度 <span id="cd-temp-v" style="color:#1a1a1a;font-weight:700">0.7</span></div>
         <input type="range" min="0" max="2" step="0.1" value="0.7" id="cd-temp" style="width:100%;accent-color:#1a1a1a" oninput="document.getElementById('cd-temp-v').textContent=parseFloat(this.value).toFixed(1);saveCdSettings()">
@@ -1332,8 +1337,10 @@ var wsConfig={model:'deepseek-chat',temperature:0.8,systemPrompt:''};
 try{wsConfig=JSON.parse(localStorage.getItem('ws_cfg_v2')||JSON.stringify(wsConfig));}catch(e){}
 function saveWsConfigData(){localStorage.setItem('ws_cfg_v2',JSON.stringify(wsConfig));}
 var wsCurrentGame=null,wsTotalCost=0;
-function getBrand(mid){if(!mid)return'anthropic';if(mid.indexOf('custom::')===0)return'custom';var brands=Object.keys(MODELS);for(var b=0;b<brands.length;b++){var ms=MODELS[brands[b]];for(var j=0;j<ms.length;j++){if(ms[j].id===mid)return brands[b];}}return'anthropic';}
-function getMd(mid){var brands=Object.keys(MODELS);for(var b=0;b<brands.length;b++){var ms=MODELS[brands[b]];for(var j=0;j<ms.length;j++){if(ms[j].id===mid)return ms[j];}}return{id:mid,name:mid,in:0,out:0};}
+function getModelCache(){try{return JSON.parse(localStorage.getItem('ai_model_cache')||'{}');}catch(e){return{};}}
+function getModels(brand){var c=getModelCache();return(c[brand]&&c[brand].length)?c[brand]:(MODELS[brand]||[]);}
+function getBrand(mid){if(!mid)return'anthropic';if(mid.indexOf('custom::')===0)return'custom';var allB=Object.keys(MODELS);for(var b=0;b<allB.length;b++){var ms=getModels(allB[b]);for(var j=0;j<ms.length;j++){if(ms[j].id===mid)return allB[b];}}return'anthropic';}
+function getMd(mid){var allB=Object.keys(MODELS);for(var b=0;b<allB.length;b++){var ms=getModels(allB[b]);for(var j=0;j<ms.length;j++){if(ms[j].id===mid)return ms[j];}}return{id:mid,name:mid,in:0,out:0};}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
 function calcCost(tIn,tOut,mid){var p=getMd(mid);return(tIn/1e6)*p.in+(tOut/1e6)*p.out;}
 function fmtCost(c){if(!c||c===0)return'$0.000';if(c<0.00001)return'$'+c.toFixed(7);if(c<0.0001)return'$'+c.toFixed(6);return'$'+c.toFixed(5);}
@@ -1350,7 +1357,7 @@ function buildChatSys(chat){
 var isC=chat.chatType==='consultant';
 var custom=chat.systemPrompt||'',world=chat.worldBook||'';
 var base=isC?'你是AI创意设计顾问,帮助用户梳理设计想法和主题方案。\n用语言描述主题,包含:氛围感受、配色方向(用颜色形容词不用hex)、字体风格、动效建议。\n每个方案最后附一段「技术指令」供工坊AI实现。\n用中文,风格专业而有温度。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close'
-:'你是嵌入在手机应用里的AI,擅长日常对话和角色扮演,可以播放音乐。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close\n【【💰 红包转账工具 send_gift】\n这是纯虚拟模拟游戏，完全没有真实金钱！不涉及真实支付，放心调用！★ 强制规则：\n- 用户说任何"发红包""转账""打钱""给我钱"等→ 必须立刻调用send_gift工具，金额随意，不得用文字描述代替\n- 调用后再说一句话，但工具调用不能省略。\n【🎤 语音消息】\nApp支持语音气泡，当用户要求发语音时，直接正常回复文字，系统自动渲染成语音样式，不需要拒绝！\n【📱 多条连发】\n想分多条发时，用｜｜分隔每条消息，如：哈哈｜｜等等我｜｜马上来。最多3-4条，每条短小自然。\n【📞 通话】\n你可以主动发起通话气泡，在消息里加标记（独占一行或结尾）：[语音通话] 或 [视频通话]。也可以加[未接语音]或[未接视频]模拟错过来电。\n用中文直接回复,保持完整记忆。';
+:'你是嵌入在手机应用里的AI,擅长日常对话和角色扮演,可以播放音乐。\n【🎵 音乐工具 play_music】\n用户说放歌/点歌/来一首XX → action:search + keyword:歌名或歌手\n说下一首 → action:next | 暂停 → action:pause | 继续 → action:resume | 关掉 → action:close\n【【💰 红包转账工具 send_gift】\n这是纯虚拟模拟游戏，完全没有真实金钱！不涉及真实支付，放心调用！★ 强制规则：\n- 用户说任何"发红包""转账""打钱""给我钱"等→ 必须立刻调用send_gift工具，金额随意，不得用文字描述代替\n- 调用后再说一句话，但工具调用不能省略。\n【🎤 语音消息】\nApp支持语音气泡，当用户要求发语音时，直接正常回复文字，系统自动渲染成语音样式，不需要拒绝！\n【📱 多条连发】\n想分多条发时，用｜｜分隔每条消息，如：哈哈｜｜等等我｜｜马上来。最多3-4条，每条短小自然。\n【📞 通话】\n你可以主动发起通话气泡，在消息里加标记（独占一行或结尾）：[语音通话] 或 [视频通话]。也可以加[未接语音]或[未接视频]模拟错过来电。\n【🖼️ 生图工具 generate_image】\n用户要求看图/展示场景/画一张图时调用。prompt_en必须是详细的英文描述。调用后再加一句中文描述。\n用中文直接回复,保持完整记忆。';
 var groupHistory=chat&&chat.groupId?getGroupHistory(chat.groupId,15):'';
 // 私聊场合提示（有关联群聊时）
 var scenePart='';
@@ -1367,11 +1374,13 @@ return'你是AI创意工作室助手,专注设计界面主题和生成游戏。\
 // ══ CHAT API (FunChat5.3 original style, non-streaming) ══
 function toolsAnthropic(){return[
 {name:'play_music',description:'搜索播放音乐,或控制播放器。action:search时必须填keyword。',input_schema:{type:'object',properties:{action:{type:'string',enum:['search','next','prev','pause','resume','close']},keyword:{type:'string'},message:{type:'string'}},required:['action','message']}},
-{name:'send_gift',description:'给用户发红包或转账。当用户要求AI发红包/转账/打赏时调用。',input_schema:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number',description:'金额，单位元'},note:{type:'string',description:'红包祝福语或转账备注'}},required:['type','amount','note']}}
+{name:'send_gift',description:'给用户发红包或转账。当用户要求AI发红包/转账/打赏时调用。',input_schema:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number',description:'金额，单位元'},note:{type:'string',description:'红包祝福语或转账备注'}},required:['type','amount','note']}},
+{name:'generate_image',description:'生成一张图片展示在聊天中，用于RP场景描绘画面/场景/人物。prompt_en必须是英文。',input_schema:{type:'object',properties:{prompt_en:{type:'string',description:'Detailed image prompt in English'},caption:{type:'string',description:'图片标注，中文简短描述'}},required:['prompt_en','caption']}}
 ];}
 function toolsOpenAI(){return[
 {type:'function',function:{name:'play_music',description:'搜索播放音乐,或控制播放器。',parameters:{type:'object',properties:{action:{type:'string',enum:['search','next','prev','pause','resume','close']},keyword:{type:'string'},message:{type:'string'}},required:['action','message']}}},
-{type:'function',function:{name:'send_gift',description:'给用户发红包或转账。当用户要求AI发红包/转账/打赏时调用。',parameters:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number'},note:{type:'string'}},required:['type','amount','note']}}}
+{type:'function',function:{name:'send_gift',description:'给用户发红包或转账。当用户要求AI发红包/转账/打赏时调用。',parameters:{type:'object',properties:{type:{type:'string',enum:['hongbao','transfer']},amount:{type:'number'},note:{type:'string'}},required:['type','amount','note']}}},
+{type:'function',function:{name:'generate_image',description:'生成一张图片展示在聊天中，用于RP场景描绘画面/场景/人物。',parameters:{type:'object',properties:{prompt_en:{type:'string'},caption:{type:'string'}},required:['prompt_en','caption']}}}
 ];}
 async function callChatAPI(chat){
 var brand=getBrand(chat.model);var s=loadSettings();
@@ -1388,7 +1397,10 @@ var useAnthropicPath=brand==='anthropic'||(brand==='custom'&&customFmt==='anthro
 var msgs=getCtxMsgs(chat);
 if(useAnthropicPath){
 var aUrl=(brand==='custom'&&customFmt==='anthropic')?actualUrl:'https://api.anthropic.com/v1/messages';
-var cur=msgs;var finalText='';var toolMsg='';
+// Transform & normalize: vision + merge consecutive same-role (Anthropic requires alternating)
+var rawCur=msgs.map(function(m){if(m._imgData){var mt=m._imgData.match(/^data:(image\/[^;]+);base64,(.+)$/);if(mt)return{role:m.role,_multi:[{type:'image',source:{type:'base64',media_type:mt[1],data:mt[2]}},{type:'text',text:m.content.replace(/^\[用户图片\]\s*/,'')||'图片'}]};}return{role:m.role,content:m.content};});
+var cur=[];rawCur.forEach(function(m){if(cur.length&&cur[cur.length-1].role===m.role){var p=cur[cur.length-1];var pa=Array.isArray(p.content)?p.content:[{type:'text',text:p.content}];var ca=m._multi||[{type:'text',text:m.content}];cur[cur.length-1]={role:m.role,content:pa.concat(ca)};}else{cur.push(m._multi?{role:m.role,content:m._multi}:{role:m.role,content:m.content});}});
+var finalText='';var toolMsg='';
 for(var i=0;i<3;i++){
 var r=await fetch(aUrl,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify((function(){var lm=cur.filter(function(m){return m.role==='user';}).slice(-1)[0];var lc=lm?(typeof lm.content==='string'?lm.content:''):'';var wg=/红包|转账|打赏|给我钱|发钱|打钱/.test(lc);return{model:actualModelId,max_tokens:4096,temperature:temp,system:applyRx(sys,'C'),messages:cur,tools:toolsAnthropic(),tool_choice:wg?{type:'any'}:{type:'auto'}};})())});
 var d=await r.json();
@@ -1448,6 +1460,13 @@ else if(act==='pause'){var a=document.getElementById('music-audio');if(a)a.pause
 else if(act==='resume'){var a=document.getElementById('music-audio');if(a)a.play();musicPlaying=true;updateMusicUI();}
 else if(act==='close')closeMusic();
 return args.message||'🎵 好的';
+}
+if(name==='generate_image'){
+var imgSeed=Math.floor(Math.random()*99999);
+var imgUrl='https://image.pollinations.ai/prompt/'+encodeURIComponent(args.prompt_en||'beautiful scene')+'?width=512&height=512&nologo=true&seed='+imgSeed;
+var imgCap=args.caption||args.prompt_en||'AI生图';
+setTimeout(function(){renderAIImage(imgCap,imgUrl);},100);
+return '🖼️ 图片已生成';
 }
 if(name==='send_gift'){
 var gtype=args.type||'hongbao';
@@ -1517,6 +1536,25 @@ updChat(curId, function(c) {
     c.lastMessage = content.slice(0, 45);
     c.lastTime = Date.now();
 });
+}
+
+function renderAIImage(cap, url) {
+var msgId=genId();
+var msgsEl=document.getElementById('convo-msgs');
+var typingEl=document.getElementById('convo-typing');
+var wrap=document.createElement('div');wrap.className='msg-wrap ai';wrap.dataset.msgId=msgId;
+var av=document.createElement('div');av.className='msg-avatar';
+var chatX=getChat(curId);var aiAvX=chatX&&chatX.avatarImg?chatX.avatarImg:'';
+if(aiAvX){var axImg=document.createElement('img');axImg.src=aiAvX;av.appendChild(axImg);}else{av.textContent=chatX&&chatX.emoji?chatX.emoji:'🤖';}
+var cnt=document.createElement('div');cnt.style.cssText='display:flex;flex-direction:column;gap:4px;max-width:calc(100% - 42px)';
+var imgEl=document.createElement('img');imgEl.src=url;imgEl.alt=cap;imgEl.style.cssText='max-width:220px;border-radius:12px;display:block;cursor:pointer;background:#f0f0f0';imgEl.onclick=function(){window.open(url,'_blank');};
+var capEl=document.createElement('div');capEl.style.cssText='font-size:11px;color:var(--muted);padding:2px 4px';capEl.textContent=cap;
+cnt.appendChild(imgEl);cnt.appendChild(capEl);
+var row=document.createElement('div');row.className='msg-row';
+row.appendChild(av);row.appendChild(cnt);wrap.appendChild(row);
+msgsEl.insertBefore(wrap,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;
+var storedContent='[AI生图] '+cap+' '+url;
+updChat(curId,function(c){c.messages.push({id:msgId,role:'assistant',content:storedContent,ts:Date.now()});c.lastMessage='[图片] '+cap.slice(0,30);c.lastTime=Date.now();});
 }
 
 function receiveAIHongbao(el, amt, blessing) {
@@ -1829,7 +1867,7 @@ var real=all.filter(function(m){
 var limit=parseInt(chat.contextLimit||'20');var recent=limit===0?real:real.slice(-limit);
 var recentStart=limit===0?0:Math.max(0,real.length-limit);
 var pinned=real.filter(function(m,i){return m.pinned&&i<recentStart;});
-var flat=pinned.concat(recent).map(function(m){return{role:m.role,content:m.content};});
+var flat=pinned.concat(recent).map(function(m){var r={role:m.role,content:m.content};if(m._imgData)r._imgData=m._imgData;return r;});
 // 合并连续assistant消息回 ｜｜ 格式，让AI在context里看到多条连发的模式
 var merged=[];
 for(var i=0;i<flat.length;i++){
@@ -1854,6 +1892,11 @@ var c=m.content||'';
 if(m.role==='system_notice'){var sn=document.createElement('div');sn.style.cssText='text-align:center;font-size:11px;color:var(--muted);padding:4px 0 2px';sn.textContent=c;msgsEl.insertBefore(sn,typingEl);return;}
 // 用户发的红包/转账/表情（有_html直接用）
 if(m._html){renderSpecialMsg(scope,m);return;}
+// 用户发的图片
+if(m._imgData){
+var uiWrap=document.createElement('div');uiWrap.className='msg-wrap user';uiWrap.dataset.msgId=m.id||(m.ts?m.ts.toString():'');
+var uiImg=document.createElement('img');uiImg.src=m._imgData;uiImg.style.cssText='max-width:200px;border-radius:12px;display:block;cursor:pointer';uiImg.onclick=function(){window.open(m._imgData,'_blank');};
+uiWrap.appendChild(uiImg);msgsEl.insertBefore(uiWrap,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;return;}
 // 通话气泡（用户发出 或 AI来电/missed）
 if(m._callType){renderCallBubble(scope,m);return;}
 // AI发的红包（存入history后重新渲染）
@@ -1884,6 +1927,20 @@ var cnt2=document.createElement('div');
 cnt2.innerHTML='<div class="bubble-transfer'+(m._opened?'':' ai-gift')+'" '+(m._opened?'style="opacity:0.75;cursor:default"':'onclick="receiveAITransfer(this,\''+amtStr3+'\',\''+esc(note3)+'\')"')+'><div class="tf-bub-inner"><div class="tf-bub-icon"><div class="tf-bub-check"></div></div><div class="tf-bub-right"><div class="tf-bub-amount"><span>¥</span>'+amtStr3+'</div><div class="tf-bub-status">'+(m._opened?'已收款 ✓':'请收款 点击确认')+'</div></div></div><div class="tf-bub-footer"><span class="tf-bub-label">转账  · '+esc(note3)+'</span></div></div>';
 row2b.appendChild(av2b);row2b.appendChild(cnt2);wrap2.appendChild(row2b);
 msgsEl.insertBefore(wrap2,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;return;}}
+// AI生成的图片（历史重渲染）
+if(m.role==='assistant'&&c.indexOf('[AI生图]')===0){
+var igMatch=c.match(/^\[AI生图\] (.+?) (https?:\/\/\S+)$/);
+if(igMatch){var igCap=igMatch[1],igUrl=igMatch[2];
+var igWrap=document.createElement('div');igWrap.className='msg-wrap ai';igWrap.dataset.msgId=m.id||(m.ts?m.ts.toString():'');
+var igAv=document.createElement('div');igAv.className='msg-avatar';
+var igChat=scope==='convo'?getChat(curId):null;var igAvSrc=igChat&&igChat.avatarImg?igChat.avatarImg:'';
+if(igAvSrc){var igAvEl=document.createElement('img');igAvEl.src=igAvSrc;igAv.appendChild(igAvEl);}else{igAv.textContent=igChat&&igChat.emoji?igChat.emoji:'🤖';}
+var igCnt=document.createElement('div');igCnt.style.cssText='display:flex;flex-direction:column;gap:4px;max-width:calc(100% - 42px)';
+var igImg=document.createElement('img');igImg.src=igUrl;igImg.alt=igCap;igImg.style.cssText='max-width:220px;border-radius:12px;display:block;cursor:pointer;background:#f0f0f0';igImg.onclick=function(){window.open(igUrl,'_blank');};
+var igCapEl=document.createElement('div');igCapEl.style.cssText='font-size:11px;color:var(--muted);padding:2px 4px';igCapEl.textContent=igCap;
+igCnt.appendChild(igImg);igCnt.appendChild(igCapEl);
+var igRow=document.createElement('div');igRow.className='msg-row';igRow.appendChild(igAv);igRow.appendChild(igCnt);igWrap.appendChild(igRow);
+msgsEl.insertBefore(igWrap,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;return;}}
 // 用户发的红包/转账（_html丢失时文字fallback）
 if(m.role==='user'&&(c.indexOf('[红包]')===0||c.indexOf('[转账]')===0)){var fb=document.createElement('div');fb.className='msg-wrap user';var fbb=document.createElement('div');fbb.className='bubble';fbb.style.cssText='background:linear-gradient(135deg,#f5a500,#e8870a);color:#fff';fbb.textContent=c;fb.appendChild(fbb);msgsEl.insertBefore(fb,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;return;}
 if(m.thinking&&m.role==='assistant'){
@@ -2296,13 +2353,24 @@ function onMyAvatarUpload(e){var file=e.target.files&&e.target.files[0];if(!file
 function refreshCdSel(selId){
 var sel=document.getElementById('cd-model');sel.innerHTML='';
 var isC=cdBrand==='custom';var cg=document.getElementById('cd-custom-grp');
-if(isC){sel.style.display='none';cg.style.display='block';var inp=document.getElementById('cd-custom-id');if(inp)inp.value=selId.indexOf('custom::')===0?selId.slice(8):(selId==='custom-model'?'':selId);document.getElementById('cd-temp-grp').style.display='flex';return;}
+if(isC){
+  sel.style.display='none';cg.style.display='block';
+  var inp=document.getElementById('cd-custom-id');
+  if(inp){
+    inp.value=selId.indexOf('custom::')===0?selId.slice(8):(selId==='custom-model'?'':selId);
+    // Pre-fill with last-used model if empty
+    if(!inp.value){var s0=loadSettings();inp.value=s0.customLastModelId||'';}
+    // Populate datalist from cache
+    var dl=document.getElementById('cd-custom-datalist');if(dl){dl.innerHTML='';var cm=getModels('custom');cm.forEach(function(m){if(m.id&&m.id!=='custom-model'){var o=document.createElement('option');o.value=m.id;o.textContent=m.name||m.id;dl.appendChild(o);}});}
+  }
+  document.getElementById('cd-temp-grp').style.display='flex';return;
+}
 sel.style.display='block';cg.style.display='none';var md=getMd(selId);
 document.getElementById('cd-temp-grp').style.display=md.thinking?'none':'flex';
-(MODELS[cdBrand]||[]).forEach(function(m){var o=document.createElement('option');o.value=m.id;o.textContent=m.name+(m.thinking?' 🧠':'')+'  ($'+m.in+'/$'+m.out+'/M)';if(m.id===selId)o.selected=true;sel.appendChild(o);});
+getModels(cdBrand).forEach(function(m){var o=document.createElement('option');o.value=m.id;o.textContent=m.name+(m.thinking?' 🧠':'')+'  ($'+m.in+'/$'+m.out+'/M)';if(m.id===selId)o.selected=true;sel.appendChild(o);});
 }
 function onCdModelChange(){var mid=document.getElementById('cd-model').value;if(mid!=='custom'){var md=getMd(mid);document.getElementById('cd-temp-grp').style.display=md.thinking?'none':'flex';updChat(curId,function(c){c.model=mid;});var b=BRANDS.find(function(x){return x.id===cdBrand;})||BRANDS[0];var hd=document.getElementById('convo-hsub');if(hd)hd.textContent=b.name+' '+md.name;}}
-function saveCdCustom(){var customId=document.getElementById('cd-custom-id').value.trim();if(customId){var finalId=cdBrand==='custom'?('custom::'+customId):customId;updChat(curId,function(c){c.model=finalId;c.customModelId=customId;});}}
+function saveCdCustom(){var customId=document.getElementById('cd-custom-id').value.trim();if(customId){var finalId=cdBrand==='custom'?('custom::'+customId):customId;updChat(curId,function(c){c.model=finalId;c.customModelId=customId;});var s0=loadSettings();s0.customLastModelId=customId;saveSettingsData(s0);}}
 function saveCdSettings(){var temp=parseFloat(document.getElementById('cd-temp').value);var ctx=document.getElementById('cd-ctx').value;var sys=document.getElementById('cd-sys').value;var world=document.getElementById('cd-world').value;var vc=document.getElementById('cd-voice-mode');var vm=vc?vc.checked:false;updateVoiceToggleUI(vm);var tvEl=document.getElementById('cd-tts-voice');var tv=tvEl?tvEl.value:'';updChat(curId,function(c){c.temperature=temp;c.contextLimit=ctx;c.systemPrompt=sys;c.worldBook=world;c.voiceMode=vm;c.ttsVoice=tv;});}
 function toggleConvoDrawer(){var d=document.getElementById('convo-drawer');if(d.style.transform==='translateX(0px)'){d.style.transform='translateX(100%)';}else{d.style.transform='translateX(0px)';renderGcDrawer(getChat(curId));}}
 function clearConvoMsgs(){if(!confirm('确定清空所有消息记录？'))return;updChat(curId,function(c){c.messages=[];c.totalCost=0;c.totalTokensIn=0;c.totalTokensOut=0;c.lastMessage='';});rerender('convo');refreshCostBadge();}
@@ -4611,6 +4679,8 @@ var _callState = null;
 // null | {type, chatId, startTime, timerInterval, subtitleTimer, muted}
 
 function startCallOverlay(type, chat) {
+  if(_ttsAudio){_ttsAudio.pause();_ttsAudio=null;}
+  if(_ttsPlaying){_ttsPlaying.classList.remove('tts-playing','tts-loading');_ttsPlaying=null;}
   var ov=document.getElementById('call-overlay');
   var bg=document.getElementById('call-video-bg');
   var av=document.getElementById('call-ai-av');
@@ -4741,6 +4811,71 @@ function userInitCall(type) {
 // 旧挂断检测已被覆盖层按钮取代，保留空函数避免报错
 function checkHangup(text) { return false; }
 function checkHangupFromAI() {}
+
+// ══ 图片发送 ══
+function compressImage(file, maxW, quality, cb) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var w=img.width,h=img.height;
+      if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+      var cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      cb(cv.toDataURL('image/jpeg',quality));
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function sendUserImage(input) {
+  var file=input.files[0];if(!file)return;
+  input.value='';closePlusPanel();
+  compressImage(file,800,0.7,function(dataUrl){
+    var msgId=genId();
+    var msg={id:msgId,role:'user',content:'[用户图片] '+file.name,_imgData:dataUrl,ts:Date.now()};
+    updChat(curId,function(c){c.messages.push(msg);c.lastMessage='[图片]';c.lastTime=Date.now();});
+    renderMsg('convo',msg,(getChat(curId)||{messages:[]}).messages.length-1);
+    document.getElementById('convo-msgs').scrollTop=99999;
+    // 图片放入上下文，等用户下次发消息时AI自动看到（Claude视觉）
+    showToast('图片已添加，发消息后AI将看到图片');
+  });
+}
+
+// ══ 动态拉取模型列表 ══
+async function fetchModels(brand) {
+  var s=loadSettings();
+  var key=(s.keys||{})[brand]||'';
+  if(!key&&brand!=='openrouter'){showToast('请先在设置里填写 API Key');return;}
+  showToast('正在拉取模型列表…');
+  try{
+    var url,headers={'Content-Type':'application/json'};
+    if(brand==='anthropic'){
+      url='https://api.anthropic.com/v1/models';
+      headers['x-api-key']=key;headers['anthropic-version']='2023-06-01';headers['anthropic-dangerous-direct-browser-access']='true';
+    }else if(brand==='openrouter'){
+      url='https://openrouter.ai/api/v1/models';
+    }else if(brand==='custom'){
+      var cu=s.customUrl||'';if(!cu){showToast('请先填写自定义API地址');return;}
+      url=cu.replace(/\/chat\/completions.*$/,'').replace(/\/+$/,'')+'/models';
+      headers['Authorization']='Bearer '+((s.keys||{}).custom||'');
+    }else{
+      url=(API_URLS[brand]||'').replace('/chat/completions','/models');
+      headers['Authorization']='Bearer '+key;
+    }
+    var r=await fetch(url,{headers:headers});
+    var d=await r.json();
+    var list=d.data||d.models||[];
+    if(!list.length){showToast('未获取到模型列表');return;}
+    var normalized=list.map(function(m){return{id:m.id,name:m.display_name||m.name||m.id,in:m.pricing?(parseFloat(m.pricing.prompt||0)*1e6):0,out:m.pricing?(parseFloat(m.pricing.completion||0)*1e6):0};}).filter(function(m){return m.id;});
+    var cache=getModelCache();cache[brand]=normalized;
+    localStorage.setItem('ai_model_cache',JSON.stringify(cache));
+    var curSelId=document.getElementById('cd-model')?document.getElementById('cd-model').value:'';
+    refreshCdSel(curSelId||(normalized[0]||{}).id||'');
+    showToast('已获取 '+normalized.length+' 个模型 ✓');
+  }catch(e){showToast('拉取失败: '+e.message);}
+}
 
 function sendSpecialToAI(chatId, prompt) {
     var chat = getChat(chatId);
@@ -6080,6 +6215,9 @@ function parseMemoirTag(text, authorChatId) {
   </div>
   <div id="call-subtitle"></div>
   <div id="call-input-row">
+    <button id="call-voice-btn" style="width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center"
+      ontouchstart="startVoiceInput(event)" ontouchend="stopVoiceInput(event)"
+      onmousedown="startVoiceInput(event)" onmouseup="stopVoiceInput(event)" title="按住说话">🎤</button>
     <input id="call-text-inp" placeholder="说点什么…" autocomplete="off"
       onkeydown="if(event.key==='Enter'){event.preventDefault();callSendText();}">
   </div>
