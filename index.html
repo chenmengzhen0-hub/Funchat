@@ -4,7 +4,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,interactive-widget=resizes-content">
-<title>AI Studio</title>
+<title>Funchat</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4f8ef7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Funchat">
+<link rel="apple-touch-icon" href="/icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Orbitron:wght@400;700&family=Ma+Shan+Zheng&family=Nunito:wght@400;600;700&family=Space+Mono&family=Caveat:wght@400;600&family=Noto+Serif+SC:wght@400;600&family=Pacifico&family=ZCOOL+XiaoWei&family=ZCOOL+KuaiLe&family=Long+Cang&family=Liu+Jian+Mao+Cao&display=swap" rel="stylesheet">
@@ -226,6 +232,37 @@ html,body{height:100%;overflow:hidden;background:#f5f5f3}
 .plus-btn.recording{background:#ff4444;color:#fff;border-color:#ff4444;animation:tpulse .6s infinite}
 #voice-toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;font-size:13px;padding:8px 18px;border-radius:20px;z-index:999;display:none;pointer-events:none;white-space:nowrap}
 #voice-toast.show{display:block}
+#app-toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;font-size:13px;padding:9px 20px;border-radius:20px;z-index:1000;opacity:0;pointer-events:none;white-space:nowrap;transition:opacity .2s;max-width:80vw;text-align:center}
+#app-toast.show{opacity:1}
+/* ── CALL OVERLAY ── */
+#call-overlay{position:fixed;inset:0;z-index:950;flex-direction:column;align-items:center;justify-content:center;display:none}
+#call-overlay.show{display:flex}
+#call-video-bg{position:absolute;inset:0;background:#0d0d1a no-repeat center/cover;filter:blur(28px) brightness(.4) saturate(1.3);transform:scale(1.1)}
+#call-video-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.15),rgba(0,0,0,.55))}
+#call-ai-av{position:relative;z-index:2;width:132px;height:132px;border-radius:50%;background:linear-gradient(135deg,#4f8ef7,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:58px;overflow:hidden;box-shadow:0 0 0 6px rgba(255,255,255,.15),0 0 0 12px rgba(255,255,255,.07)}
+#call-ai-av img{width:100%;height:100%;object-fit:cover}
+#call-overlay.voice-mode #call-ai-av{animation:callPulseAv 3s ease-in-out infinite}
+@keyframes callPulseAv{0%,100%{box-shadow:0 0 0 6px rgba(255,255,255,.15),0 0 0 12px rgba(255,255,255,.07)}50%{box-shadow:0 0 0 12px rgba(255,255,255,.2),0 0 0 24px rgba(255,255,255,.06)}}
+#call-ai-av.ringing{animation:callRing .22s ease-in-out infinite alternate!important}
+@keyframes callRing{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+#call-user-pip{position:absolute;top:52px;right:18px;z-index:5;width:76px;height:76px;border-radius:14px;overflow:hidden;border:2.5px solid rgba(255,255,255,.5);background:#333;box-shadow:0 4px 18px rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;font-size:32px}
+#call-overlay.video-mode #call-user-pip{display:flex}
+#call-user-pip img{width:100%;height:100%;object-fit:cover}
+#call-meta{position:relative;z-index:2;text-align:center;margin-top:24px}
+#call-name{color:#fff;font-size:22px;font-weight:700;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+#call-status-txt{color:rgba(255,255,255,.7);font-size:14px;margin-top:6px}
+#call-timer{color:#fff;font-size:30px;font-weight:300;letter-spacing:3px;margin-top:8px;display:none;font-variant-numeric:tabular-nums}
+#call-subtitle{position:absolute;bottom:192px;left:50%;transform:translateX(-50%);width:82%;max-width:320px;z-index:5;background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:14px;padding:11px 16px;color:#fff;font-size:14px;line-height:1.55;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none}
+#call-subtitle.show{opacity:1}
+#call-input-row{position:absolute;bottom:92px;left:0;right:0;z-index:5;display:flex;align-items:center;gap:10px;padding:0 18px}
+#call-text-inp{flex:1;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);border-radius:24px;padding:11px 16px;color:#fff;font-size:15px;outline:none;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+#call-text-inp::placeholder{color:rgba(255,255,255,.45)}
+.call-controls{position:absolute;bottom:20px;left:0;right:0;z-index:5;display:flex;align-items:center;justify-content:center;gap:28px}
+.call-ctrl-btn{width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;font-size:22px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.2);color:#fff;transition:background .15s,transform .1s;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.call-ctrl-btn:active{transform:scale(.9)}
+.call-ctrl-btn.active{background:rgba(255,255,255,.48)}
+#call-end-btn{background:#ff3b30;width:64px;height:64px;font-size:28px}
+#call-end-btn:active{background:#cc2e26}
 #plus-panel{position:absolute;bottom:100%;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:14px 16px;display:none;gap:18px;flex-wrap:wrap;z-index:20;animation:slideIn .18s ease}
 #plus-panel.open{display:flex}
 .plus-item{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -841,6 +878,7 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
   </div>
   <div class="input-area" style="position:relative">
     <div id="voice-toast">🎙️ 聆听中…松开发送</div>
+    <div id="app-toast"></div>
   <div id="sticker-panel">
       <div class="sticker-tabs" id="sticker-tabs"></div>
       <div class="sticker-grid" id="sticker-grid"></div>
@@ -1051,6 +1089,14 @@ select.mfinp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
       <button onclick="resetUsage()" style="margin-top:8px;padding:8px;border-radius:8px;border:none;background:#ff3b3015;color:#ff3b30;font-size:12px;font-weight:600;cursor:pointer;width:100%">🗑 重置统计</button>
     </div>
     <button class="mbtn" onclick="saveSettings()">保存</button>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f0f0f0">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">💾 数据备份</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="exportData()" style="flex:1;padding:10px;border-radius:10px;border:none;background:#4f8ef715;color:#4f8ef7;font-size:13px;font-weight:600;cursor:pointer">📤 导出备份</button>
+        <button onclick="importData()" style="flex:1;padding:10px;border-radius:10px;border:none;background:#07c16015;color:#07c160;font-size:13px;font-weight:600;cursor:pointer">📥 导入恢复</button>
+      </div>
+      <div style="font-size:11px;color:#999;margin-top:6px;line-height:1.5">导出文件含聊天记录、角色、设置（含 API Key），请妥善保管。</div>
+    </div>
   </div>
 </div>
 
@@ -1292,7 +1338,7 @@ function genId(){return Date.now().toString(36)+Math.random().toString(36).slice
 function calcCost(tIn,tOut,mid){var p=getMd(mid);return(tIn/1e6)*p.in+(tOut/1e6)*p.out;}
 function fmtCost(c){if(!c||c===0)return'$0.000';if(c<0.00001)return'$'+c.toFixed(7);if(c<0.0001)return'$'+c.toFixed(6);return'$'+c.toFixed(5);}
 function fmtTime(ts){if(!ts)return'';var d=new Date(ts),n=new Date();if(d.toDateString()===n.toDateString())return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');return(d.getMonth()+1)+'/'+(d.getDate());}
-function esc(s){return(s||'').replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>');}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;');}
 function applyRx(text,scope){
 var chat=curId?getChat(curId):null;var rxRules=(chat&&chat.rxRules)?chat.rxRules:DEF_RX;
 var rules=rxRules.filter(function(r){return r.on&&r.scope===scope;});
@@ -1917,7 +1963,8 @@ if(borderCls){
 if(m.voiceDur&&m.role==='assistant'){
   bub.classList.add('bubble-voice');
   bub.innerHTML='<span class="voice-icon">🔊</span><div class="voice-wave"><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div></div><span class="voice-dur">'+m.voiceDur+'</span>';
-bub.onclick=function(){var _c2=getChat(curId);playFishTTS(applyRx(m.content,'A'),(_c2&&_c2.ttsVoice)||'',bub);};
+// 点击播放 TTS，长按显示上下文菜单（避免双重冲突）
+bub.addEventListener('click',function(e){e.stopPropagation();var _c2=getChat(curId);playFishTTS(applyRx(m.content,'A'),(_c2&&_c2.ttsVoice)||'',bub);});
   bub.style.fontFamily=S.fc;
   bub.style.background=S.bai;bub.style.color=S.text;bub.style.border='1px solid '+S.border;
   var vWrap=document.createElement('div');vWrap.style.cssText='display:flex;flex-direction:column;max-width:calc(100% - 42px)';
@@ -1926,7 +1973,6 @@ bub.onclick=function(){var _c2=getChat(curId);playFishTTS(applyRx(m.content,'A')
   vWrap.appendChild(vtxt);
   if(m.meta){var me2=document.createElement('div');me2.className='msg-meta';me2.textContent=m.meta;vWrap.appendChild(me2);}
   row.appendChild(av);row.appendChild(vWrap);wrap.appendChild(row);
-  bub.addEventListener('click',function(e){e.stopPropagation();var ri=scope==='convo'?getRealIdx(wrap.dataset.msgId):parseInt(wrap.dataset.idx);showCtx(e,ri>=0?ri:idx,m.role,scope);});
   msgsEl.insertBefore(wrap,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;
   return;
 }
@@ -1968,8 +2014,7 @@ async function convoSend(){
 var ta=document.getElementById('convo-in');var text=ta.value.trim();
 if(!text||!curId||isCnvSending)return;
 var _gc=getChat(curId);if(_gc&&_gc.chatType==='group'){groupSend();return;}
-// 通话挂断检测
-if(checkHangup(text)){ta.value='';ta.style.height='auto';return;}
+if(_callState){showToast('通话进行中，请在通话界面输入');return;}
 ta.value='';ta.style.height='auto';isCnvSending=true;updateSend('convo');
 scheduleIdleProactive(curId);
 if(editingMsgId!=null){
@@ -4561,116 +4606,141 @@ function renderCallBubble(scope, m) {
   msgsEl.scrollTop = msgsEl.scrollHeight;
 }
 
+// ══ CALL OVERLAY STATE MACHINE ══
+var _callState = null;
+// null | {type, chatId, startTime, timerInterval, subtitleTimer, muted}
+
+function startCallOverlay(type, chat) {
+  var ov=document.getElementById('call-overlay');
+  var bg=document.getElementById('call-video-bg');
+  var av=document.getElementById('call-ai-av');
+  var pip=document.getElementById('call-user-pip');
+  av.innerHTML='';
+  if(chat.avatarImg){var img=document.createElement('img');img.src=chat.avatarImg;av.appendChild(img);if(type==='video')bg.style.backgroundImage='url('+chat.avatarImg+')';}
+  else{av.textContent=chat.emoji||'🤖';bg.style.backgroundImage='none';}
+  pip.innerHTML='';
+  var myAv=loadMyAvatar();
+  if(myAv){var pi=document.createElement('img');pi.src=myAv;pip.appendChild(pi);}else{pip.textContent='😎';}
+  document.getElementById('call-name').textContent=chat.name;
+  document.getElementById('call-status-txt').textContent='等待接听…';
+  var timerEl=document.getElementById('call-timer');timerEl.style.display='none';timerEl.textContent='00:00';
+  document.getElementById('call-subtitle').classList.remove('show');
+  document.getElementById('call-text-inp').value='';
+  ov.style.opacity='1';
+  ov.className='show '+(type==='video'?'video-mode':'voice-mode');
+  av.classList.add('ringing');
+  _callState={type:type,chatId:curId,startTime:null,timerInterval:null,subtitleTimer:null,muted:false};
+}
+
+function connectCall() {
+  if(!_callState)return;
+  document.getElementById('call-ai-av').classList.remove('ringing');
+  document.getElementById('call-status-txt').textContent=_callState.type==='video'?'视频通话中':'语音通话中';
+  var timerEl=document.getElementById('call-timer');timerEl.style.display='block';
+  _callState.startTime=Date.now();
+  _callState.timerInterval=setInterval(function(){
+    if(!_callState)return;
+    var s=Math.floor((Date.now()-_callState.startTime)/1000),m=Math.floor(s/60);s%=60;
+    timerEl.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+  },1000);
+}
+
+function userHangup() {
+  if(!_callState)return;
+  var st=_callState;_callState=null;
+  clearInterval(st.timerInterval);clearTimeout(st.subtitleTimer);
+  var ov=document.getElementById('call-overlay');
+  ov.style.transition='opacity .3s';ov.style.opacity='0';
+  setTimeout(function(){ov.className='';ov.style.opacity='';ov.style.transition='';},320);
+  document.getElementById('call-subtitle').classList.remove('show');
+  updChat(st.chatId,function(c){delete c._activeCall;});
+  if(!st.startTime){
+    var m2={id:genId(),role:'user',content:st.type==='video'?'[视频通话]':'[语音通话]',_callType:st.type,_callStatus:'missed_out',ts:Date.now()};
+    updChat(st.chatId,function(c){c.messages.push(m2);c.lastMessage=st.type==='video'?'🎥 未接视频':'☎️ 未接来电';c.lastTime=Date.now();});
+    if(curId===st.chatId)renderCallBubble('convo',m2);
+    return;
+  }
+  var dur=Math.floor((Date.now()-st.startTime)/1000);
+  var durStr=dur>=60?Math.floor(dur/60)+'分'+(dur%60)+'秒':dur+'秒';
+  var endMsg={id:genId(),role:'user',content:st.type==='video'?'[视频通话]':'[语音通话]',_callType:st.type,_callStatus:'ended_user',_callDuration:durStr,ts:Date.now()};
+  updChat(st.chatId,function(c){c.messages.push(endMsg);c.lastMessage=(st.type==='video'?'🎥 视频通话':'☎️ 语音通话')+' '+durStr;c.lastTime=Date.now();});
+  if(curId===st.chatId)rerender('convo');
+  sendSpecialToAI(st.chatId,'通话结束了（时长'+durStr+'），说一句挂断后的自然回应（带emoji，简短）');
+}
+
+function callShowSubtitle(text) {
+  if(!_callState)return;
+  var sub=document.getElementById('call-subtitle');if(!sub)return;
+  sub.textContent=text;sub.classList.add('show');
+  clearTimeout(_callState.subtitleTimer);
+  _callState.subtitleTimer=setTimeout(function(){sub.classList.remove('show');},5000);
+}
+
+function callSendText() {
+  var inp=document.getElementById('call-text-inp');
+  var text=inp?inp.value.trim():'';
+  if(!text||!_callState)return;
+  inp.value='';
+  var st=_callState;
+  callShowSubtitle('你：'+text);
+  var nid=genId();
+  updChat(st.chatId,function(c){c.messages.push({role:'user',content:text,ts:Date.now(),id:nid,_callMsg:true});c.lastMessage=text;c.lastTime=Date.now();});
+  sendSpecialToAI(st.chatId,text);
+}
+
+function toggleCallMute() {
+  if(!_callState)return;
+  _callState.muted=!_callState.muted;
+  var btn=document.getElementById('call-mute-btn');
+  if(btn){btn.textContent=_callState.muted?'🔇':'🎙️';btn.classList.toggle('active',_callState.muted);}
+}
+function toggleCallSpeaker() {
+  var btn=document.getElementById('call-spk-btn');if(btn)btn.classList.toggle('active');
+}
+
 // 用户点接听AI来电
 function answerIncomingCall(incomingMsg) {
   if (!curId) return;
+  if (_callState) { showToast('通话中，请先挂断'); return; }
   var type = incomingMsg._callType || 'voice';
-  var callStartTime = Date.now();
-  // 更新AI侧气泡为通话中
-  updChat(curId, function(c) {
-    var msg=(c.messages||[]).find(function(x){return x.id===incomingMsg.id;});
-    if(msg){msg._callStatus='active_ai';msg._callStartTime=callStartTime;}
-  });
-  rerender('convo');
-  // 插入用户侧通话中气泡
-  var userActiveId = genId();
-  var userActiveMsg = {id:userActiveId, role:'user', content:'[通话中]', _callType:type, _callStatus:'active_user', _callStartTime:callStartTime, _callPairId:incomingMsg.id, ts:Date.now()};
-  updChat(curId, function(c){c.messages.push(userActiveMsg);});
-  renderCallBubble('convo', userActiveMsg);
-  // 标记聊天正在通话
-  updChat(curId, function(c){c._activeCall={type:type,startTime:callStartTime,userMsgId:userActiveId,aiMsgId:incomingMsg.id};});
-  // AI说接通了
-  sendSpecialToAI(curId, (type==='video'?'用户接听了你的视频通话，说一句接通时的自然回应（带emoji，简短）':'用户接听了你的语音电话，说一句接通时的自然回应（带emoji，简短）'));
+  var chat = getChat(curId); if (!chat) return;
+  startCallOverlay(type, chat);
+  connectCall();
+  updChat(curId, function(c){c._activeCall={type:type,startTime:_callState?_callState.startTime:Date.now()};});
+  sendSpecialToAI(curId, type==='video'?'用户接听了你的视频通话，说一句接通时的自然回应（带emoji，简短）':'用户接听了你的语音电话，说一句接通时的自然回应（带emoji，简短）');
 }
 
-// 用户发出通话
+// 用户发出通话（全新覆盖层版本）
 function userInitCall(type) {
   if (!curId) return;
   var chat = getChat(curId); if (!chat) return;
-  // 群聊禁用
-  if (chat.chatType === 'group') { alert('群聊暂不支持通话哦～'); return; }
-  // 通话中禁止再拨
-  if (chat._activeCall) { alert('当前正在通话中，说"挂了"结束后再试～'); return; }
+  if (chat.chatType === 'group') { showToast('群聊暂不支持通话哦～'); return; }
+  if (_callState) { showToast('通话进行中，请先挂断'); return; }
   closePlusPanel();
-  var isVideo = type==='video';
-  var outId = genId();
-  var outMsg = {id:outId, role:'user', content:isVideo?'[视频通话]':'[语音通话]', _callType:type, _callStatus:'outgoing', ts:Date.now()};
-  updChat(curId, function(c){c.messages.push(outMsg); c.lastMessage=isVideo?'🎥 视频通话':'☎️ 语音通话'; c.lastTime=Date.now();});
-  renderCallBubble('convo', outMsg);
-  // AI随机接听70%
-  var aiAnswers = Math.random() < 0.7;
-  var callStartTime = Date.now();
-  setTimeout(function(){
-    var aiId = genId();
-    if (aiAnswers) {
-      // 双方进入通话中
-      var aiActiveMsg = {id:aiId, role:'assistant', content:'[通话中]', _callType:type, _callStatus:'active_ai', _callStartTime:callStartTime, ts:Date.now()};
-      updChat(curId, function(c){
-        // 更新用户气泡为通话中
-        var om=(c.messages||[]).find(function(x){return x.id===outId;});
-        if(om) om._callStatus='active_user';
-        om._callStartTime=callStartTime;
-        c.messages.push(aiActiveMsg);
-        c._activeCall={type:type,startTime:callStartTime,userMsgId:outId,aiMsgId:aiId};
-      });
-      rerender('convo');
-      sendSpecialToAI(curId, isVideo?'用户给你发起视频通话，你接了，说一句接通时的自然回应（带emoji，简短）':'用户给你打语音电话，你接了，说一句接通时的自然回应（带emoji，简短）');
+  startCallOverlay(type, chat);
+  updChat(curId, function(c){ c._activeCall={type:type,startTime:null}; });
+  var savedId = curId;
+  setTimeout(function() {
+    if (!_callState || _callState.chatId !== savedId) return;
+    if (Math.random() < 0.7) {
+      connectCall();
+      updChat(savedId, function(c){ if(c._activeCall) c._activeCall.startTime = _callState ? _callState.startTime : Date.now(); });
+      sendSpecialToAI(savedId, type==='video'?'用户给你发起了视频通话，你接了，说一句接通时的自然问候（带emoji，简短自然）':'用户给你打了语音电话，你接了，说一句接通时的自然问候（带emoji，简短自然）');
     } else {
-      // 双方未接通
-      var aiMissedMsg = {id:aiId, role:'assistant', content:'[未接来电]', _callType:type, _callStatus:'missed_in', ts:Date.now()};
-      updChat(curId, function(c){
-        var om=(c.messages||[]).find(function(x){return x.id===outId;});
-        if(om) om._callStatus='missed_out';
-        c.messages.push(aiMissedMsg);
-      });
-      rerender('convo');
-      setTimeout(function(){
-        sendSpecialToAI(curId, isVideo?'用户给你发起视频通话但你没接到，发一条消息解释没接的原因（带emoji，自然随意）':'用户给你打语音电话但你没接到，发一条消息解释没接的原因（带emoji，自然随意）');
-      }, 500);
+      var ov=document.getElementById('call-overlay');ov.style.opacity='0';setTimeout(function(){ov.className='';ov.style.opacity='';},320);
+      _callState=null;
+      updChat(savedId,function(c){delete c._activeCall;});
+      var mMsg={id:genId(),role:'user',content:type==='video'?'[视频通话]':'[语音通话]',_callType:type,_callStatus:'missed_out',ts:Date.now()};
+      updChat(savedId,function(c){c.messages.push(mMsg);c.lastMessage=type==='video'?'🎥 未接视频':'☎️ 未接来电';c.lastTime=Date.now();});
+      if(curId===savedId)renderCallBubble('convo',mMsg);
+      setTimeout(function(){sendSpecialToAI(savedId,type==='video'?'用户给你发起视频通话但你没接到，发一条消息解释下（带emoji，自然随意）':'用户给你打语音电话但你没接到，发一条消息解释下（带emoji，自然随意）');},500);
     }
-  }, 900 + Math.random()*600);
+  }, 1100 + Math.random() * 900);
 }
 
-// 检测"挂了"并结束通话（用户触发）
-function checkHangup(text) {
-  if (!curId) return false;
-  var chat = getChat(curId);
-  if (!chat || !chat._activeCall) return false;
-  var hangupWords = ['挂了','挂断','挂啦','挂掉','bye','拜拜','再见','88','886','拜','不说了','先这样','先挂','挂电话','结束通话','没事了','走了','回头聊','晚点聊','待会儿','待会见','待会'];
-  var matched = hangupWords.some(function(w){return text.indexOf(w)>=0;});
-  if (!matched) return false;
-  var call = chat._activeCall;
-  var dur = Math.round((Date.now()-call.startTime)/1000);
-  var durStr = dur>=60 ? Math.floor(dur/60)+'分'+dur%60+'秒' : dur+'秒';
-  updChat(curId, function(c){
-    (c.messages||[]).forEach(function(m){
-      if(m.id===call.userMsgId){m._callStatus='ended_user';m._callDuration=durStr;}
-      if(m.id===call.aiMsgId){m._callStatus='ended_ai';m._callDuration=durStr;}
-    });
-    delete c._activeCall;
-  });
-  rerender('convo');
-  sendSpecialToAI(curId, '通话结束了（时长'+durStr+'），说一句挂断后的自然回应（带emoji，简短）');
-  return true;
-}
-
-// AI侧挂断（不再触发AI回复，避免循环）
-function checkHangupFromAI() {
-  if (!curId) return;
-  var chat = getChat(curId);
-  if (!chat || !chat._activeCall) return;
-  var call = chat._activeCall;
-  var dur = Math.round((Date.now()-call.startTime)/1000);
-  var durStr = dur>=60 ? Math.floor(dur/60)+'分'+dur%60+'秒' : dur+'秒';
-  updChat(curId, function(c){
-    (c.messages||[]).forEach(function(m){
-      if(m.id===call.userMsgId){m._callStatus='ended_user';m._callDuration=durStr;}
-      if(m.id===call.aiMsgId){m._callStatus='ended_ai';m._callDuration=durStr;}
-    });
-    delete c._activeCall;
-  });
-  rerender('convo');
-}
+// 旧挂断检测已被覆盖层按钮取代，保留空函数避免报错
+function checkHangup(text) { return false; }
+function checkHangupFromAI() {}
 
 function sendSpecialToAI(chatId, prompt) {
     var chat = getChat(chatId);
@@ -4754,6 +4824,12 @@ function sendSpecialToAI(chatId, prompt) {
                 });
                 var fresh = getChat(chatId);
                 if (fresh) renderMsg('convo', fresh.messages[fresh.messages.length - 1], fresh.messages.length - 1);
+                // 通话中：同步播字幕 + TTS
+                if (_callState && _callState.chatId === chatId) {
+                    callShowSubtitle(part);
+                    var c3 = getChat(chatId);
+                    if (c3 && c3.ttsVoice) playFishTTS(applyRx(part,'A'), c3.ttsVoice, null);
+                }
             });
         }
     }).catch(function(e) {
@@ -4949,6 +5025,11 @@ function startVoiceInput(e) {
 
     recog.onresult = function(ev) {
         var text = ev.results[0][0].transcript;
+        if (_callState) {
+            var callInp = document.getElementById('call-text-inp');
+            if (callInp && text) { callInp.value = text; callSendText(); }
+            return;
+        }
         var ta = document.getElementById('convo-in');
         if (ta && text) {
             ta.value = (ta.value ? ta.value + ' ' : '') + text;
@@ -4977,12 +5058,14 @@ function stopVoiceInput(e) {
     }
 }
 
+var _toastTimer = null;
 function showToast(msg) {
-    var t = document.getElementById('voice-toast');
+    var t = document.getElementById('app-toast');
     if (!t) return;
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(function(){ t.textContent = '🎙️ 聆听中…松开发送'; t.classList.remove('show'); }, 2000);
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
 }
 
 
@@ -5002,18 +5085,22 @@ async function playFishTTS(text, voiceId, bubbleEl) {
     if (!apiKey) { showToast('请先在设置里填写 Fish Audio API Key'); return; }
     if (!voiceId) return;
 
-    // 如果同一个气泡正在播放，点击暂停
-    if (_ttsPlaying === bubbleEl && _ttsAudio && !_ttsAudio.paused) {
-        _ttsAudio.pause();
-        bubbleEl.classList.remove('tts-playing');
-        _ttsPlaying = null;
+    // 同一气泡：切换播放/暂停
+    if (bubbleEl && _ttsPlaying === bubbleEl && _ttsAudio) {
+        if (!_ttsAudio.paused) {
+            _ttsAudio.pause();
+            bubbleEl.classList.remove('tts-playing');
+        } else {
+            _ttsAudio.play();
+            bubbleEl.classList.add('tts-playing');
+        }
         return;
     }
     // 停止之前的播放
     if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
     if (_ttsPlaying) { _ttsPlaying.classList.remove('tts-playing'); _ttsPlaying = null; }
 
-    bubbleEl.classList.add('tts-loading');
+    if (bubbleEl) bubbleEl.classList.add('tts-loading');
     try {
         var resp = await fetch('https://music-api-2026.vercel.app/api/tts', {
             method: 'POST',
@@ -5034,25 +5121,65 @@ async function playFishTTS(text, voiceId, bubbleEl) {
         var audio = new Audio(url);
         _ttsAudio = audio;
         _ttsPlaying = bubbleEl;
-        bubbleEl.classList.remove('tts-loading');
-        bubbleEl.classList.add('tts-playing');
+        if (bubbleEl) { bubbleEl.classList.remove('tts-loading'); bubbleEl.classList.add('tts-playing'); }
         audio.onended = function() {
-            bubbleEl.classList.remove('tts-playing');
-            _ttsPlaying = null;
+            if (bubbleEl) bubbleEl.classList.remove('tts-playing');
+            if (_ttsPlaying === bubbleEl) _ttsPlaying = null;
             _ttsAudio = null;
             URL.revokeObjectURL(url);
         };
         audio.onerror = function() {
-            bubbleEl.classList.remove('tts-playing');
+            if (bubbleEl) bubbleEl.classList.remove('tts-playing');
             _ttsPlaying = null; _ttsAudio = null;
             showToast('播放失败');
         };
         await audio.play();
     } catch(e) {
-        bubbleEl.classList.remove('tts-loading');
+        if (bubbleEl) bubbleEl.classList.remove('tts-loading');
         showToast('TTS错误: ' + e.message);
     }
 }
+// ══ DATA EXPORT / IMPORT ══
+function exportData() {
+  var data = {_version: 1, _exported: new Date().toISOString()};
+  for (var i = 0; i < localStorage.length; i++) {
+    var k = localStorage.key(i);
+    try { data[k] = localStorage.getItem(k); } catch(e) {}
+  }
+  var json = JSON.stringify(data, null, 2);
+  var blob = new Blob([json], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'funchat-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('已导出备份 ✓');
+}
+
+function importData() {
+  var inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = function(e) {
+    var file = e.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        var data = JSON.parse(ev.target.result);
+        if (!data._version) { showToast('文件格式错误，导入失败'); return; }
+        Object.keys(data).forEach(function(k) {
+          if (k.startsWith('_')) return;
+          try { localStorage.setItem(k, data[k]); } catch(ex) {}
+        });
+        showToast('导入成功，正在刷新…');
+        setTimeout(function() { location.reload(); }, 1200);
+      } catch(ex) { showToast('导入失败：' + ex.message); }
+    };
+    reader.readAsText(file);
+  };
+  document.body.appendChild(inp); inp.click(); document.body.removeChild(inp);
+}
+
 // ══ BOOKSHELF & NOTEBOOK SYSTEM ══
 
 const NB_COVERS = [
@@ -5941,4 +6068,30 @@ function parseMemoirTag(text, authorChatId) {
     <button onclick="confirmCrop()" style="padding:11px 28px;border-radius:12px;border:none;background:#fff;color:#1a1a1a;font-size:14px;font-weight:700;cursor:pointer">使用</button>
   </div>
 </div>
+<!-- ══ 通话全屏覆盖层 ══ -->
+<div id="call-overlay">
+  <div id="call-video-bg"></div>
+  <div id="call-ai-av"></div>
+  <div id="call-user-pip"></div>
+  <div id="call-meta">
+    <div id="call-name"></div>
+    <div id="call-status-txt">连接中…</div>
+    <div id="call-timer">00:00</div>
+  </div>
+  <div id="call-subtitle"></div>
+  <div id="call-input-row">
+    <input id="call-text-inp" placeholder="说点什么…" autocomplete="off"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();callSendText();}">
+  </div>
+  <div class="call-controls">
+    <button class="call-ctrl-btn" id="call-mute-btn" onclick="toggleCallMute()" title="静音">🎙️</button>
+    <button class="call-ctrl-btn" id="call-end-btn" onclick="userHangup()">📵</button>
+    <button class="call-ctrl-btn" id="call-spk-btn" onclick="toggleCallSpeaker()" title="扬声器">🔊</button>
+  </div>
+</div>
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(function(){});
+}
+</script>
 </html>
