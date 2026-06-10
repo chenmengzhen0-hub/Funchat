@@ -1345,7 +1345,7 @@ function genId(){return Date.now().toString(36)+Math.random().toString(36).slice
 function calcCost(tIn,tOut,mid){var p=getMd(mid);return(tIn/1e6)*p.in+(tOut/1e6)*p.out;}
 function fmtCost(c){if(!c||c===0)return'$0.000';if(c<0.00001)return'$'+c.toFixed(7);if(c<0.0001)return'$'+c.toFixed(6);return'$'+c.toFixed(5);}
 function fmtTime(ts){if(!ts)return'';var d=new Date(ts),n=new Date();if(d.toDateString()===n.toDateString())return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');return(d.getMonth()+1)+'/'+(d.getDate());}
-function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;');}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/"/g,'&quot;');}
 function applyRx(text,scope){
 var chat=curId?getChat(curId):null;var rxRules=(chat&&chat.rxRules)?chat.rxRules:DEF_RX;
 var rules=rxRules.filter(function(r){return r.on&&r.scope===scope;});
@@ -1904,14 +1904,26 @@ if(m.role==='assistant'&&c.indexOf('[AI发红包]')===0){
 var match=c.match(/\[AI发红包\] (.+?) ¥([\d.]+)/);
 if(match){var note2=match[1],amt2=match[2];
 var amtStr2=parseFloat(amt2).toFixed(2);
+var chat2a=getChat(curId);
+var isGcHb=!!(chat2a&&chat2a.chatType==='group'&&m.senderName);
 var wrap1=document.createElement('div');wrap1.className='msg-wrap ai';wrap1.dataset.msgId=m.id||(m.ts?m.ts.toString():'');
 var av1=document.createElement('div');av1.className='msg-avatar';
-var chat2a=getChat(curId);var aiAv1=chat2a&&chat2a.avatarImg?chat2a.avatarImg:'';
-if(aiAv1){var aimg1=document.createElement('img');aimg1.src=aiAv1;av1.appendChild(aimg1);}else{av1.textContent=chat2a&&chat2a.emoji?chat2a.emoji:'🤖';}
+var aiAv1=isGcHb?(m.senderAvatarImg||''):(chat2a&&chat2a.avatarImg?chat2a.avatarImg:'');
+if(aiAv1){var aimg1=document.createElement('img');aimg1.src=aiAv1;av1.appendChild(aimg1);}else{av1.textContent=isGcHb?(m.senderEmoji||'🤖'):(chat2a&&chat2a.emoji?chat2a.emoji:'🤖');}
 var row1=document.createElement('div');row1.className='msg-row';
 var cnt1=document.createElement('div');
-cnt1.innerHTML='<div class="bubble-hongbao ai-gift'+(m._opened?' opened':'')+'" '+(m._opened?'style="opacity:0.7;cursor:default"':'onclick="receiveAIHongbao(this,\''+amtStr2+'\',\''+esc(note2)+'\')" style="cursor:pointer"')+'><div class="hb-bub-inner"><div class="hb-bub-icon"></div><div class="hb-bub-text"><div class="hb-bub-greeting">'+esc(note2)+'</div><div class="hb-bub-sub">微信红包</div></div></div><div class="hb-bub-footer"><span class="hb-bub-type">'+(m._opened?'已领取':'红包')+'</span><span class="hb-bub-name">¥'+amtStr2+'</span></div></div>';
-row1.appendChild(av1);row1.appendChild(cnt1);wrap1.appendChild(row1);
+var hbClick=isGcHb?'gcReceiveHongbao(this,\''+esc(m.senderName)+'\','+amtStr2+',\''+esc(note2)+'\')':'receiveAIHongbao(this,\''+amtStr2+'\',\''+esc(note2)+'\')';
+var hbSub=isGcHb?esc(m.senderName)+' 发的红包':'微信红包';
+cnt1.innerHTML='<div class="bubble-hongbao ai-gift'+(m._opened?' opened':'')+'" '+(m._opened?'style="opacity:0.7;cursor:default"':'onclick="'+hbClick+'" style="cursor:pointer"')+'><div class="hb-bub-inner"><div class="hb-bub-icon"></div><div class="hb-bub-text"><div class="hb-bub-greeting">'+esc(note2)+'</div><div class="hb-bub-sub">'+hbSub+'</div></div></div><div class="hb-bub-footer"><span class="hb-bub-type">'+(m._opened?'已领取':'红包')+'</span><span class="hb-bub-name">¥'+amtStr2+'</span></div></div>';
+if(isGcHb){
+var hbName=document.createElement('div');hbName.className='gc-msg-name';hbName.textContent=m.senderName;
+var hbCol=document.createElement('div');hbCol.style.cssText='display:flex;flex-direction:column;max-width:calc(100% - 42px)';
+hbCol.appendChild(hbName);hbCol.appendChild(cnt1);
+row1.appendChild(av1);row1.appendChild(hbCol);
+}else{
+row1.appendChild(av1);row1.appendChild(cnt1);
+}
+wrap1.appendChild(row1);
 msgsEl.insertBefore(wrap1,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;return;}}
 // AI发的转账
 if(m.role==='assistant'&&c.indexOf('[AI转账]')===0){
@@ -2753,6 +2765,11 @@ function gcRenderAIHongbao(member, amt, note) {
   bubWrap.appendChild(nameEl);bubWrap.appendChild(cnt);
   row.appendChild(av);row.appendChild(bubWrap);wrap.appendChild(row);
   msgsEl.insertBefore(wrap,typingEl);msgsEl.scrollTop=msgsEl.scrollHeight;
+  // 存入历史（用同一个hbId，刷新后能重渲染、领取状态能持久化）
+  updChat(curId,function(c){
+    c.messages.push({id:hbId,role:'assistant',content:'[AI发红包] '+note+' ¥'+amtStr,senderName:member.name,senderEmoji:member.emoji||'',senderAvatarImg:avImg||'',memberId:member.id,ts:Date.now()});
+    c.lastMessage='['+member.name+']: 🧧红包';c.lastTime=Date.now();
+  });
 }
 function gcReceiveHongbao(el, senderName, amt, note) {
   var footer=el.querySelector('.hb-bub-footer');
@@ -2768,7 +2785,14 @@ function gcReceiveHongbao(el, senderName, amt, note) {
   sys.style.cssText='text-align:center;font-size:11px;color:var(--muted);padding:4px 0';
   sys.textContent='你领取了'+senderName+'的红包 ¥'+amt.toFixed(2);
   msgsEl.insertBefore(sys,typingEl);
-  sendSpecialToAI(curId,'用户领取了你（'+senderName+'）发的¥'+amt.toFixed(2)+'红包，开心回应一句（带emoji）');
+  // 只让发红包的成员本人回应，不惊动全群
+  var gcChat=getChat(curId);
+  var senderM=gcChat&&gcChat.members?gcChat.members.find(function(mm){return mm.name===senderName;}):null;
+  if(senderM){
+    sendSpecialToAI(curId,JSON.stringify({_gcHongbao:true,prompts:[{member:senderM,prompt:'用户领取了你发的¥'+amt.toFixed(2)+'红包，开心回应一句（带emoji）'}]}));
+  }else{
+    sendSpecialToAI(curId,'用户领取了'+senderName+'发的¥'+amt.toFixed(2)+'红包，开心回应一句（带emoji）');
+  }
 }
 function getGroupHistory(groupId,limit){
   if(!groupId)return '';
@@ -2843,12 +2867,17 @@ async function groupSend(){
       var hbMatch=result.text&&result.text.match(/\[发红包\]\s*([\d.]+)\s*(.+)?$/m);
       var replyText=(result.text||'（空回复）').replace(/\[发红包\].*$/m,'').trim();
       replyText=replyText.replace(/^\[?[^\]]{1,10}\]?\s*[:：]\s*/,'').trim();
+      if(!replyText&&!hbMatch)replyText='（空回复）';
       var cost=calcCost(result.tIn,result.tOut,member.model);
       var rid=genId();
+      typingEl.classList.remove('show');
+      if(replyText){ // 只发了红包没说话时，不渲染空文字气泡
       var replyMsg={role:'assistant',content:replyText,senderName:member.name,senderEmoji:member.emoji||'',senderAvatarImg:member.avatarImg||'',memberId:member.id,ts:Date.now(),id:rid,tIn:result.tIn,tOut:result.tOut,cost:cost};
       updChat(curId,function(c){c.messages.push(replyMsg);c.lastMessage='['+member.name+']: '+replyText.slice(0,40);c.lastTime=Date.now();c.totalCost=(c.totalCost||0)+cost;c.totalTokensIn=(c.totalTokensIn||0)+result.tIn;c.totalTokensOut=(c.totalTokensOut||0)+result.tOut;});
-      typingEl.classList.remove('show');
       renderMsg('convo',replyMsg,(getChat(curId)?getChat(curId).messages:[]).length-1);
+      }else{
+      updChat(curId,function(c){c.totalCost=(c.totalCost||0)+cost;c.totalTokensIn=(c.totalTokensIn||0)+result.tIn;c.totalTokensOut=(c.totalTokensOut||0)+result.tOut;});
+      }
       refreshCostBadge();addUsage(member.model,result.tIn,result.tOut,cost);
       // 渲染AI发的红包（可点击领取）
       if(hbMatch){
@@ -4522,18 +4551,21 @@ function sendHongbao(amt, blessing) {
     }
 }
 
-// 随机分割金额（至少每人0.01元）
+// 随机分割金额（至少每人0.01元；总额太小分不够时后面的人拿0，绝不出负数）
 function gcSplitAmount(total, n) {
     if (n <= 1) return [total];
     var splits = [];
     var remaining = Math.round(total * 100); // 转成分
     for (var i = 0; i < n - 1; i++) {
-        var max = remaining - (n - i - 1);
-        var got = Math.max(1, Math.floor(Math.random() * max * 0.8) + 1);
+        var left = n - i - 1;            // 后面还有几人
+        var max = remaining - left;      // 当前人最多拿多少(给后面每人留1分)
+        var got;
+        if (max <= 1) got = Math.max(0, Math.min(1, max));
+        else got = Math.floor(Math.random() * Math.max(1, Math.floor(max * 0.8))) + 1;
         splits.push(got);
         remaining -= got;
     }
-    splits.push(remaining);
+    splits.push(Math.max(remaining, 0));
     // shuffle
     for (var j = splits.length - 1; j > 0; j--) {
         var k = Math.floor(Math.random() * (j + 1));
@@ -4699,7 +4731,25 @@ function startCallOverlay(type, chat) {
   ov.style.opacity='1';
   ov.className='show '+(type==='video'?'video-mode':'voice-mode');
   av.classList.add('ringing');
-  _callState={type:type,chatId:curId,startTime:null,timerInterval:null,subtitleTimer:null,muted:false};
+  _callState={type:type,chatId:curId,startTime:null,timerInterval:null,subtitleTimer:null,muted:false,camStream:null};
+  // 视频通话：调真实前置摄像头进小窗（拒绝授权则保持头像）
+  if(type==='video'&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false}).then(function(stream){
+      if(!_callState||_callState.type!=='video'){stream.getTracks().forEach(function(t){t.stop();});return;}
+      _callState.camStream=stream;
+      var pip2=document.getElementById('call-user-pip');
+      pip2.innerHTML='';
+      var v=document.createElement('video');
+      v.autoplay=true;v.muted=true;v.playsInline=true;v.setAttribute('playsinline','');
+      v.srcObject=stream;
+      v.style.cssText='width:100%;height:100%;object-fit:cover;transform:scaleX(-1)';
+      pip2.appendChild(v);
+    }).catch(function(){});
+  }
+}
+
+function stopCallCam(st){
+  if(st&&st.camStream){st.camStream.getTracks().forEach(function(t){t.stop();});st.camStream=null;}
 }
 
 function connectCall() {
@@ -4718,6 +4768,7 @@ function connectCall() {
 function userHangup() {
   if(!_callState)return;
   var st=_callState;_callState=null;
+  stopCallCam(st);
   clearInterval(st.timerInterval);clearTimeout(st.subtitleTimer);
   var ov=document.getElementById('call-overlay');
   ov.style.transition='opacity .3s';ov.style.opacity='0';
@@ -4798,7 +4849,7 @@ function userInitCall(type) {
       sendSpecialToAI(savedId, type==='video'?'用户给你发起了视频通话，你接了，说一句接通时的自然问候（带emoji，简短自然）':'用户给你打了语音电话，你接了，说一句接通时的自然问候（带emoji，简短自然）');
     } else {
       var ov=document.getElementById('call-overlay');ov.style.opacity='0';setTimeout(function(){ov.className='';ov.style.opacity='';},320);
-      _callState=null;
+      var stMiss=_callState;_callState=null;stopCallCam(stMiss);
       updChat(savedId,function(c){delete c._activeCall;});
       var mMsg={id:genId(),role:'user',content:type==='video'?'[视频通话]':'[语音通话]',_callType:type,_callStatus:'missed_out',ts:Date.now()};
       updChat(savedId,function(c){c.messages.push(mMsg);c.lastMessage=type==='video'?'🎥 未接视频':'☎️ 未接来电';c.lastTime=Date.now();});
@@ -4902,7 +4953,8 @@ function sendSpecialToAI(chatId, prompt) {
                     for (var pi = 0; pi < perMemberPrompts.length; pi++) {
                         if (perMemberPrompts[pi].member.id === member.id) { found = perMemberPrompts[pi]; break; }
                     }
-                    if (found) memberPrompt = found.prompt;
+                    if (!found) continue; // 没有自己的prompt就不回应（避免拿到原始JSON）
+                    memberPrompt = found.prompt;
                 }
                 var typingTxt = typingEl ? typingEl.querySelector('.typing-txt') : null;
                 if (typingTxt) typingTxt.textContent = member.name + '在输入…';
@@ -4937,7 +4989,11 @@ function sendSpecialToAI(chatId, prompt) {
     }
     // 普通私聊原逻辑
     var tempMsgs = chat.messages.slice();
-    tempMsgs.push({ role: 'user', content: prompt });
+    // 通话中发消息时该消息已存入history，避免在上下文里重复出现
+    var lastM = tempMsgs[tempMsgs.length - 1];
+    if (!(lastM && lastM.role === 'user' && lastM.content === prompt)) {
+        tempMsgs.push({ role: 'user', content: prompt });
+    }
     var tempChat = {};
     for (var k in chat) { if (chat.hasOwnProperty(k)) tempChat[k] = chat[k]; }
     tempChat.messages = tempMsgs;
@@ -4959,11 +5015,12 @@ function sendSpecialToAI(chatId, prompt) {
                 });
                 var fresh = getChat(chatId);
                 if (fresh) renderMsg('convo', fresh.messages[fresh.messages.length - 1], fresh.messages.length - 1);
-                // 通话中：同步播字幕 + TTS
+                // 通话中：同步播字幕 + TTS（没选音色就用默认第一个，保证通话有声音）
                 if (_callState && _callState.chatId === chatId) {
                     callShowSubtitle(part);
                     var c3 = getChat(chatId);
-                    if (c3 && c3.ttsVoice) playFishTTS(applyRx(part,'A'), c3.ttsVoice, null);
+                    var vId = (c3 && c3.ttsVoice) || Object.keys(FISH_VOICES)[0];
+                    if (c3 && !_callState.muted) playFishTTS(applyRx(part,'A'), vId, null);
                 }
             });
         }
