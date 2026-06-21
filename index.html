@@ -4770,6 +4770,8 @@ function userHangup() {
   var st=_callState;_callState=null;
   stopCallCam(st);
   clearInterval(st.timerInterval);clearTimeout(st.subtitleTimer);
+  if(_ttsAudio){_ttsAudio.pause();_ttsAudio=null;}
+  if(window.speechSynthesis)window.speechSynthesis.cancel();
   var ov=document.getElementById('call-overlay');
   ov.style.transition='opacity .3s';ov.style.opacity='0';
   setTimeout(function(){ov.className='';ov.style.opacity='';ov.style.transition='';},320);
@@ -5015,12 +5017,10 @@ function sendSpecialToAI(chatId, prompt) {
                 });
                 var fresh = getChat(chatId);
                 if (fresh) renderMsg('convo', fresh.messages[fresh.messages.length - 1], fresh.messages.length - 1);
-                // 通话中：同步播字幕 + TTS（没选音色就用默认第一个，保证通话有声音）
+                // 通话中：同步播字幕 + 强制语音（Fish Audio或浏览器TTS，静音时跳过）
                 if (_callState && _callState.chatId === chatId) {
                     callShowSubtitle(part);
-                    var c3 = getChat(chatId);
-                    var vId = (c3 && c3.ttsVoice) || Object.keys(FISH_VOICES)[0];
-                    if (c3 && !_callState.muted) playFishTTS(applyRx(part,'A'), vId, null);
+                    if (!_callState.muted) speakCallTTS(applyRx(part,'A'));
                 }
             });
         }
@@ -5320,6 +5320,11 @@ async function playFishTTS(text, voiceId, bubbleEl) {
         });
         if (!resp.ok) { throw new Error('TTS请求失败 ' + resp.status); }
         var blob = await resp.blob();
+        // 如果在fetch期间通话开始了且这是气泡TTS（非通话TTS），放弃播放
+        if (_callState && bubbleEl) {
+            if (bubbleEl) bubbleEl.classList.remove('tts-loading');
+            return;
+        }
         var url = URL.createObjectURL(blob);
         var audio = new Audio(url);
         _ttsAudio = audio;
@@ -5340,6 +5345,21 @@ async function playFishTTS(text, voiceId, bubbleEl) {
     } catch(e) {
         if (bubbleEl) bubbleEl.classList.remove('tts-loading');
         showToast('TTS错误: ' + e.message);
+    }
+}
+
+function speakCallTTS(text) {
+    // 通话中强制语音：Fish Audio优先（没选音色用第一个默认），无key降级到浏览器TTS
+    var s = loadSettings();
+    var chat = curId ? getChat(curId) : null;
+    var voiceId = (chat && chat.ttsVoice) || (s.keys && s.keys.fishaudio ? Object.keys(FISH_VOICES)[0] : '');
+    if (voiceId && s.keys && s.keys.fishaudio) {
+        playFishTTS(text, voiceId, null);
+    } else if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        var utt = new SpeechSynthesisUtterance(text);
+        utt.lang = 'zh-CN'; utt.rate = 1.05;
+        window.speechSynthesis.speak(utt);
     }
 }
 // ══ DATA EXPORT / IMPORT ══
